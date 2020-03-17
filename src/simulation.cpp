@@ -24,16 +24,7 @@ void Simulation::init()
         //    hard-coded for the single-tet mesh. You'll need to implement surface mesh extraction
         //    for arbitrary tet meshes. Think about how you can identify which tetrahedron faces
         //    are surface faces...
-//        for (auto i : tets){
-//            std::sort(i.data(), i.data()+i.size(), std::less<int>());
-//            std::string result;
-//            result = std::to_string(i[0]) + std::to_string(i[1]) + std::to_string(i[2]) + std::to_string(i[3]);
-//            if (m_surface.find(result) == m_surface.end()){
-//                m_surface[result] = 1;
-//            } else {
-//                m_surface[result]++;
-//            }
-//        }
+
         std::unordered_map<std::string, int> fourths;
         for (auto i : tets){
             Vector3i face1(i[1], i[0], i[2]);
@@ -61,19 +52,19 @@ void Simulation::init()
             }
             if (m_surface.find(result2) == m_surface.end()){
                 m_surface[result2] = 1;
-                fourths[result1] = i[1];
+                fourths[result2] = i[1];
             } else {
                 m_surface[result2]++;
             }
             if (m_surface.find(result3) == m_surface.end()){
                 m_surface[result3] = 1;
-                fourths[result1] = i[0];
+                fourths[result3] = i[0];
             } else {
                 m_surface[result3]++;
             }
             if (m_surface.find(result4) == m_surface.end()){
                 m_surface[result4] = 1;
-                fourths[result1] = i[2];
+                fourths[result4] = i[2];
             } else {
                 m_surface[result4]++;
             }
@@ -81,31 +72,20 @@ void Simulation::init()
 
         std::vector<Vector3i> faces;
         for (auto it = m_surface.begin(); it != m_surface.end(); ++it){
-            std::string tet = it->first;
-            if (m_surface[it->second] > 1){
+            std::string f = it->first;
+//            std::cout << f << std::endl;
+            if (it->second > 1){
                 continue;
             }
-            int zero = tet[0].toInt();
-            int one = tet[1].toInt();
-            int two = tet[2].toInt();
-            int three = tet[3].toInt();
-            Vector3i face1(one, zero, two);
-            Vector3i face2(two, zero, three);
-            Vector3i face3(three, one, two);
-            Vector3i face4(three, zero, one);
-            turnClockwise(face1);
-            turnClockwise(face2);
-            turnClockwise(face3);
-            turnClockwise(face4);
-            faces.emplace_back(face1);
-            faces.emplace_back(face2);
-            faces.emplace_back(face3);
-            faces.emplace_back(face4);
+            int zero = f.at(0) - '0';
+            int one = f.at(1) - '0';
+            int two = f.at(2) - '0';
+//            std::cout<< zero << " " << one << " " << two << std::endl;
+            Vector3i face(zero, one, two);
+            Vector3i newface = turnClockwise(face, fourths[f], vertices);
+            faces.emplace_back(newface);
+//            std::cout<< "new: " << newface[0] << " " << newface[1] << " " << newface[2] << std::endl;
         }
-//        faces.emplace_back(1, 0, 2);
-//        faces.emplace_back(2, 0, 3);
-//        faces.emplace_back(3, 1, 2);
-//        faces.emplace_back(3, 0, 1);
         m_shape.init(vertices, faces, tets);
     }
     m_shape.setModelMatrix(Affine3f(Eigen::Translation3f(0, 2, 0)));
@@ -128,8 +108,24 @@ void Simulation::update(float seconds)
     //node-> forces (accumulated from adjacent faces)
 }
 
-void Simulation::turnClockwise(Vector3i &face){
+Vector3i Simulation::turnClockwise(Vector3i &face, int f, std::vector<Vector3f> const &vertices){
+    Vector3f A = vertices[face[0]];
+    Vector3f B = vertices[face[1]];
+    Vector3f C = vertices[face[2]];
+    Vector3f fourth = vertices[f];
+    std::cout << f <<std::endl;
+    Vector3f AB = B-A;
+    Vector3f AC = C-A;
+    Vector3f normal = AB.cross(AC);
+    normal.normalize();
+    Vector3f centroid = (A+B+C)/3.f;
+    Vector3f oppose = fourth - centroid;
 
+    if (normal.dot(oppose) > 0.f){
+        return Vector3i(face[2], face[1], face[0]);
+    } else {
+        return face;
+    }
 }
 
 void Simulation::draw(Shader *shader)
@@ -147,11 +143,11 @@ void Simulation::initGround()
 {
     std::vector<Vector3f> groundVerts;
     std::vector<Vector3i> groundFaces;
-    groundVerts.emplace_back(-5, 0, -5);
-    groundVerts.emplace_back(-5, 0, 5);
-    groundVerts.emplace_back(5, 0, 5);
-    groundVerts.emplace_back(5, 0, -5);
-    groundFaces.emplace_back(0, 1, 2);
-    groundFaces.emplace_back(0, 2, 3);
+    groundVerts.emplace_back(Vector3f(-5, 0, -5));
+    groundVerts.emplace_back(Vector3f(-5, 0, 5));
+    groundVerts.emplace_back(Vector3f(5, 0, 5));
+    groundVerts.emplace_back(Vector3f(5, 0, -5));
+    groundFaces.emplace_back(Vector3i(0, 1, 2));
+    groundFaces.emplace_back(Vector3i(0, 2, 3));
     m_ground.init(groundVerts, groundFaces);
 }
