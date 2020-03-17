@@ -16,6 +16,7 @@ View::View(QWidget *parent) : QGLWidget(ViewFormat(), parent),
     m_lastX(), m_lastY(),
     m_capture(false)
 {
+//    glfwWindowHint(GLFW_TRANSPARENT_FRAMEBUFFER, GLFW_TRUE);
     // View needs all mouse move events, not just mouse drag events
     setMouseTracking(true);
 

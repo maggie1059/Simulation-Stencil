@@ -12,4 +12,5 @@ out vec4 position_worldSpace;
 void main(){
     normal_worldSpace = vec4(normalize(mat3(transpose(inverse(m))) * normal), 0);
     gl_Position = vp * m * vec4(position, 1.0);
+    position_worldSpace = vp * m * vec4(position, 1.0);
 }

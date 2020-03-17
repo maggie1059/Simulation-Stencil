@@ -3,8 +3,8 @@ QT += core gui opengl
 TARGET = simulation
 TEMPLATE = app
 
-QMAKE_CXXFLAGS += -std=c++14 -mstackrealign
-CONFIG += c++14
+QMAKE_CXXFLAGS += -std=c++17 -mstackrealign
+CONFIG += c++17
 
 unix:!macx {
     LIBS += -lGLU
@@ -30,7 +30,9 @@ SOURCES += \
     src/simulation.cpp \
     src/graphics/shape.cpp \
     src/graphics/camera.cpp \
-    src/graphics/MeshLoader.cpp
+    src/graphics/MeshLoader.cpp \
+    src/Node.cpp \
+    src/Element.cpp
 
 HEADERS += \
     libs/glew-1.10.0/include/GL/glew.h \
@@ -179,7 +181,9 @@ HEADERS += \
     libs/Eigen/Dense \
     libs/unsupported/Eigen/OpenGLSupport \
     ui_mainwindow.h \
-    src/graphics/MeshLoader.h
+    src/graphics/MeshLoader.h \
+    src/Node.h \
+    src/Element.h
 
 FORMS += src/mainwindow.ui
 

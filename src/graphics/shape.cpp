@@ -3,6 +3,7 @@
 #include <iostream>
 
 #include "graphics/Shader.h"
+#include "GraphicsDebug.h"
 
 using namespace Eigen;
 
