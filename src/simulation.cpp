@@ -1,13 +1,16 @@
 #include "simulation.h"
-
 #include <iostream>
-
 #include "graphics/MeshLoader.h"
+#define TIMESTEP 0.001f
+#define GRAVITY -0.01f
+#define GRAVITY_ON false
 
 using namespace Eigen;
 
 Simulation::Simulation()
 {
+    m_nodes.clear();
+    m_elements.clear();
 }
 
 void Simulation::init()
@@ -25,7 +28,17 @@ void Simulation::init()
         //    for arbitrary tet meshes. Think about how you can identify which tetrahedron faces
         //    are surface faces...
 
-        std::unordered_map<std::string, int> fourths;
+        for (auto v : vertices){
+            shared_ptr<Node> n(new Node(v));
+            m_nodes.push_back(n);
+        }
+
+        for (auto t : tets){
+            shared_ptr<Element> e(new Element(m_nodes[t[0]], m_nodes[t[1]], m_nodes[t[2]], m_nodes[t[3]]));
+            e->setMasses();
+            m_elements.push_back(e);
+        }
+
         for (auto i : tets){
             Vector3i face1(i[1], i[0], i[2]);
             Vector3i face2(i[2], i[0], i[3]);
@@ -36,50 +49,46 @@ void Simulation::init()
             std::sort(face3.data(), face3.data()+face3.size(), std::less<int>());
             std::sort(face4.data(), face4.data()+face4.size(), std::less<int>());
 
-            std::string result1;
-            std::string result2;
-            std::string result3;
-            std::string result4;
-            result1 = std::to_string(face1[0]) + std::to_string(face1[1]) + std::to_string(face1[2]);
-            result2 = std::to_string(face2[0]) + std::to_string(face2[1]) + std::to_string(face2[2]);
-            result3 = std::to_string(face3[0]) + std::to_string(face3[1]) + std::to_string(face3[2]);
-            result4 = std::to_string(face4[0]) + std::to_string(face4[1]) + std::to_string(face4[2]);
-            if (m_surface.find(result1) == m_surface.end()){
-                m_surface[result1] = 1;
+            auto result1 = std::make_tuple(face1[0], face1[1], face1[2]);
+            auto result2 = std::make_tuple(face2[0], face2[1], face2[2]);
+            auto result3 = std::make_tuple(face3[0], face3[1], face3[2]);
+            auto result4 = std::make_tuple(face4[0], face4[1], face4[2]);
+
+            if (m_surface2.find(result1) == m_surface2.end()){
+                m_surface2[result1] = 1;
                 fourths[result1] = i[3];
             } else {
-                m_surface[result1]++;
+                m_surface2[result1]++;
             }
-            if (m_surface.find(result2) == m_surface.end()){
-                m_surface[result2] = 1;
+            if (m_surface2.find(result2) == m_surface2.end()){
+                m_surface2[result2] = 1;
                 fourths[result2] = i[1];
             } else {
-                m_surface[result2]++;
+                m_surface2[result2]++;
             }
-            if (m_surface.find(result3) == m_surface.end()){
-                m_surface[result3] = 1;
+            if (m_surface2.find(result3) == m_surface2.end()){
+                m_surface2[result3] = 1;
                 fourths[result3] = i[0];
             } else {
-                m_surface[result3]++;
+                m_surface2[result3]++;
             }
-            if (m_surface.find(result4) == m_surface.end()){
-                m_surface[result4] = 1;
+            if (m_surface2.find(result4) == m_surface2.end()){
+                m_surface2[result4] = 1;
                 fourths[result4] = i[2];
             } else {
-                m_surface[result4]++;
+                m_surface2[result4]++;
             }
         }
 
         std::vector<Vector3i> faces;
-        for (auto it = m_surface.begin(); it != m_surface.end(); ++it){
-            std::string f = it->first;
-//            std::cout << f << std::endl;
+        for (auto it = m_surface2.begin(); it != m_surface2.end(); ++it){
+            auto f = it->first;
             if (it->second > 1){
                 continue;
             }
-            int zero = f.at(0) - '0';
-            int one = f.at(1) - '0';
-            int two = f.at(2) - '0';
+            int zero = std::get<0>(f);
+            int one = std::get<1>(f);
+            int two = std::get<2>(f);
 //            std::cout<< zero << " " << one << " " << two << std::endl;
             Vector3i face(zero, one, two);
             Vector3i newface = turnClockwise(face, fourths[f], vertices);
@@ -106,6 +115,82 @@ void Simulation::update(float seconds)
 
     //element-> stress/strain
     //node-> forces (accumulated from adjacent faces)
+
+//    for (shared_ptr<Node> i : m_nodes){
+//        if (i->m_position[1] < -2.f){
+//            std::cout<< "hi" <<std::endl;
+//            i->m_force -= i->m_force*(1.f+(-2.f - i->m_position[1]));
+//        }
+
+//        i->m_force = Vector3f(0, GRAVITY, 0);
+//        Vector3f a = i->m_force/i->m_mass;
+
+        //store oldPos and oldVel?
+//        Vector3f oldPos = i->m_position;
+//        Vector3f oldVel = i->m_velocity;
+
+//        i->m_position = oldPos + 0.5*seconds*oldVel;
+//        i->m_velocity = oldVel + 0.5*seconds*a;
+
+//        Vector3f midForce = getForces(midPos, midVel);
+//        Vector3f midAccel = midForce/i->m_mass;
+
+        //get forces again?
+
+//        i->m_position += 0.5*seconds*midVel;
+//        i->m_velocity += 0.5*seconds*a;
+//        vertices.push_back(i->m_position);
+//    }
+
+    updateForces();
+
+    std::vector<Vector3f> vertices;
+
+    for (shared_ptr<Node> i : m_nodes){
+//        if (i->m_position[1] < -2.f){
+//            i->m_force -= i->m_force*(1.f+(-2.f - i->m_position[1]));
+//        }
+        Vector3f a = i->m_force/i->m_mass;
+        Vector3f oldPos = i->m_position;
+        Vector3f oldVel = i->m_velocity;
+
+        i->m_position = oldPos + 0.5*seconds*oldVel;
+        i->m_velocity = oldVel + 0.5*seconds*a;
+    }
+
+    updateForces();
+
+    for (shared_ptr<Node> i : m_nodes){
+        Vector3f a = i->m_force/i->m_mass;
+        Vector3f oldPos = i->m_position;
+        Vector3f oldVel = i->m_velocity;
+
+        i->m_position = oldPos + 0.5*seconds*oldVel;
+        i->m_velocity = oldVel + 0.5*seconds*a;
+        vertices.push_back(i->m_position);
+    }
+
+    m_shape.setVertices(vertices); //should prob set normals too
+}
+
+void Simulation::updateForces(){
+    //clear forces
+    for (shared_ptr<Node> n : m_nodes){
+        n->m_force = Vector3f(0, 0, 0);
+    }
+
+    //get forces (stress/strain) for whole element
+    //distribute/accumulate across 4 nodes
+    for (shared_ptr<Element> e : m_elements){
+        e->updateForces();
+
+        if (GRAVITY_ON){
+            e->m_n1->m_force += Vector3f(0, GRAVITY, 0);
+            e->m_n2->m_force += Vector3f(0, GRAVITY, 0);
+            e->m_n3->m_force += Vector3f(0, GRAVITY, 0);
+            e->m_n4->m_force += Vector3f(0, GRAVITY, 0);
+        }
+    }
 }
 
 Vector3i Simulation::turnClockwise(Vector3i &face, int f, std::vector<Vector3f> const &vertices){
@@ -113,7 +198,6 @@ Vector3i Simulation::turnClockwise(Vector3i &face, int f, std::vector<Vector3f> 
     Vector3f B = vertices[face[1]];
     Vector3f C = vertices[face[2]];
     Vector3f fourth = vertices[f];
-    std::cout << f <<std::endl;
     Vector3f AB = B-A;
     Vector3f AC = C-A;
     Vector3f normal = AB.cross(AC);

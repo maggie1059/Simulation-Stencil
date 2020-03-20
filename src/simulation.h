@@ -5,21 +5,10 @@
 #include <unordered_set>
 #include <set>
 #include <unordered_map>
+#include <memory>
+#include "Node.h"
+#include "Element.h"
 
-//template<typename T>
-//struct hash_on_sum
-//: private std::hash<typename T>
-//{
-//  typedef T count_type;
-//  typedef std::hash<count_type> base;
-//  std::size_t operator()(T const&obj) const
-//  {
-//    return base::operator()(std::accumulate(obj.begin(),obj.end(),count_type()));
-//  }
-//};
-
-//typedef std::set<int> inner_type;
-//typedef std::unordered_set<inner_type, hash_on_sum<inner_type>> set_of_unique_sets;
 using namespace std;
 struct hash_tuple {
     template <class T1, class T2, class T3>
@@ -33,6 +22,8 @@ struct hash_tuple {
 };
 
 class Shader;
+class Node;
+class Element;
 
 class Simulation
 {
@@ -47,15 +38,20 @@ public:
 
     void toggleWire();
     Eigen::Vector3i turnClockwise(Eigen::Vector3i &face, int f, std::vector<Eigen::Vector3f> const &vertices);
+    void updateForces();
+
 private:
     Shape m_shape;
 
     Shape m_ground;
     void initGround();
+    std::vector<shared_ptr<Node>> m_nodes;
+    std::vector<shared_ptr<Element>> m_elements;
 //    std::unordered_set<std::set<unsigned>> surface;
 //    set_of_unique_sets surface;
-    std::unordered_map<std::string, int> m_surface;
+//    std::unordered_map<std::string, int> m_surface;
     std::unordered_map<std::tuple<int, int, int>, int, hash_tuple> m_surface2;
+    std::unordered_map<std::tuple<int, int, int>, int, hash_tuple> fourths;
 };
 
 #endif // SIMULATION_H
