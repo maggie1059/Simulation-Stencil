@@ -1,9 +1,8 @@
 #include "simulation.h"
 #include <iostream>
 #include "graphics/MeshLoader.h"
-#define TIMESTEP 0.001f
-#define GRAVITY -0.01f
-#define GRAVITY_ON false
+#define GRAVITY -1.f
+#define GRAVITY_ON true
 
 using namespace Eigen;
 
@@ -21,7 +20,7 @@ void Simulation::init()
     //    load up a tet mesh based on e.g. a file path specified with a command line argument.
     std::vector<Vector3f> vertices;
     std::vector<Vector4i> tets;
-    if(MeshLoader::loadTetMesh("example-meshes/single-tet.mesh", vertices, tets)) {
+    if(MeshLoader::loadTetMesh("example-meshes/cube.mesh", vertices, tets)) {
         // STUDENTS: This code computes the surface mesh of the loaded tet mesh, i.e. the faces
         //    of tetrahedra which are on the exterior surface of the object. Right now, this is
         //    hard-coded for the single-tet mesh. You'll need to implement surface mesh extraction
@@ -100,6 +99,12 @@ void Simulation::init()
     m_shape.setModelMatrix(Affine3f(Eigen::Translation3f(0, 2, 0)));
 
     initGround();
+
+//    std::cout << m_nodes[1]->m_position << std::endl;
+//    m_nodes[0]->m_position += Vector3f(0,0.1f,0);
+//    for (shared_ptr<Node> i : m_nodes){
+//        i->m_position -= Vector3f(0,1.f,0);
+//    }
 }
 
 void Simulation::update(float seconds)
@@ -113,60 +118,59 @@ void Simulation::update(float seconds)
     //    as the program is running (see View::tick in view.cpp) . You might want to e.g. add a hotkey for pausing
     //    the simulation, and perhaps start the simulation out in a paused state.
 
-    //element-> stress/strain
-    //node-> forces (accumulated from adjacent faces)
-
-//    for (shared_ptr<Node> i : m_nodes){
-//        if (i->m_position[1] < -2.f){
-//            std::cout<< "hi" <<std::endl;
-//            i->m_force -= i->m_force*(1.f+(-2.f - i->m_position[1]));
-//        }
-
-//        i->m_force = Vector3f(0, GRAVITY, 0);
-//        Vector3f a = i->m_force/i->m_mass;
-
-        //store oldPos and oldVel?
-//        Vector3f oldPos = i->m_position;
-//        Vector3f oldVel = i->m_velocity;
-
-//        i->m_position = oldPos + 0.5*seconds*oldVel;
-//        i->m_velocity = oldVel + 0.5*seconds*a;
-
-//        Vector3f midForce = getForces(midPos, midVel);
-//        Vector3f midAccel = midForce/i->m_mass;
-
-        //get forces again?
-
-//        i->m_position += 0.5*seconds*midVel;
-//        i->m_velocity += 0.5*seconds*a;
-//        vertices.push_back(i->m_position);
-//    }
-
     updateForces();
 
     std::vector<Vector3f> vertices;
 
+    std::vector<Vector3f> oldPos;
+    std::vector<Vector3f> oldVel;
+
     for (shared_ptr<Node> i : m_nodes){
-//        if (i->m_position[1] < -2.f){
-//            i->m_force -= i->m_force*(1.f+(-2.f - i->m_position[1]));
-//        }
+        if (GRAVITY_ON && i->m_position[1] <= -2.f){
+            Vector3f normal(0, 1.f, 0);
+//            i->m_force[1] -= i->m_force[1]*(1.f+(-2.f - i->m_position[1]));
+            i->m_force += abs(i->m_force.norm())*(1.f+(1*(-2.f - i->m_position[1])))*normal;
+
+        }
         Vector3f a = i->m_force/i->m_mass;
         Vector3f oldPos = i->m_position;
         Vector3f oldVel = i->m_velocity;
 
         i->m_position = oldPos + 0.5*seconds*oldVel;
-        i->m_velocity = oldVel + 0.5*seconds*a;
+        if (GRAVITY_ON && i->m_position[1] <= -2.f){
+            i->m_velocity *= -1;
+
+        } else {
+            i->m_velocity = oldVel + 0.5*seconds*a;
+        }
+
+//        i->m_position = oldPos + 0.5*seconds*oldVel;
+//        i->m_velocity = oldVel + 0.5*seconds*a;
     }
 
     updateForces();
 
     for (shared_ptr<Node> i : m_nodes){
+        if (GRAVITY_ON && i->m_position[1] <= -2.f){
+//            i->m_force[1] -= i->m_force[1]*(2.f+(-1.f - i->m_position[1]));
+            Vector3f normal(0, 1.f, 0);
+            i->m_force += abs(i->m_force.norm())*(1.f+(1*(-2.f - i->m_position[1])))*normal;
+        }
         Vector3f a = i->m_force/i->m_mass;
         Vector3f oldPos = i->m_position;
         Vector3f oldVel = i->m_velocity;
 
         i->m_position = oldPos + 0.5*seconds*oldVel;
         i->m_velocity = oldVel + 0.5*seconds*a;
+
+//        i->m_position = oldPos + 0.5*seconds*oldVel;
+//        if (GRAVITY_ON && i->m_position[1] <= -2.f){
+//            i->m_velocity *= -1;
+
+//        } else {
+//            i->m_velocity = oldVel + 0.5*seconds*a;
+//        }
+
         vertices.push_back(i->m_position);
     }
 
