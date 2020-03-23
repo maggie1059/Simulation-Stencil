@@ -21,6 +21,12 @@ struct hash_tuple {
     }
 };
 
+struct sphereInfo {
+    bool intersect;
+    Eigen::Vector3f normal;
+    float depth;
+};
+
 class Shader;
 class Node;
 class Element;
@@ -39,6 +45,9 @@ public:
     void toggleWire();
     Eigen::Vector3i turnClockwise(Eigen::Vector3i &face, int f, std::vector<Eigen::Vector3f> const &vertices);
     void updateForces();
+
+    Eigen::Vector3f reflect(Eigen::Vector3f in, Eigen::Vector3f n);
+    sphereInfo checkSphereCollision(Eigen::Vector3f position);
 
 private:
     Shape m_shape;

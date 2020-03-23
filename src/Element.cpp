@@ -14,6 +14,15 @@ Element::Element(shared_ptr<Node> n1, shared_ptr<Node> n2, shared_ptr<Node> n3, 
     : m_n1(n1), m_n2(n2), m_n3(n3), m_n4(n4)
 {
     setBeta();
+    setMasses();
+    m_f1normal = setNormal(m_n1, std::vector<shared_ptr<Node>>{m_n2, m_n3, m_n4});
+    m_f2normal = setNormal(m_n2, std::vector<shared_ptr<Node>>{m_n1, m_n3, m_n4});
+    m_f3normal = setNormal(m_n3, std::vector<shared_ptr<Node>>{m_n2, m_n1, m_n4});
+    m_f4normal = setNormal(m_n4, std::vector<shared_ptr<Node>>{m_n2, m_n3, m_n1});
+    f1_area = setArea(std::vector<shared_ptr<Node>>{m_n2, m_n3, m_n4});
+    f2_area = setArea(std::vector<shared_ptr<Node>>{m_n1, m_n3, m_n4});
+    f3_area = setArea(std::vector<shared_ptr<Node>>{m_n2, m_n1, m_n4});
+    f4_area = setArea(std::vector<shared_ptr<Node>>{m_n2, m_n3, m_n1});
 }
 
 Element::~Element(){
@@ -54,6 +63,26 @@ void Element::setMasses(){
     m_n4->setMass(mass);
 }
 
+Vector3f Element::setNormal(shared_ptr<Node> n1, std::vector<shared_ptr<Node>> nodes){
+    Vector3f A = nodes[0]->m_position;
+    Vector3f B = nodes[1]->m_position;
+    Vector3f C = nodes[2]->m_position;
+
+    Vector3f AB = B-A;
+    Vector3f AC = C-A;
+    Vector3f normal = AB.cross(AC);
+    normal.normalize();
+    Vector3f centroid = (A+B+C)/3.f;
+    Vector3f oppose = centroid - n1->m_position;
+    oppose.normalize();
+
+    if (normal.dot(oppose) < 0.f){
+        normal = -normal;
+    }
+
+    return normal;
+}
+
 void Element::setBeta(){
     Vector3f p1 = m_n1->m_position-m_n4->m_position;
     Vector3f p2 = m_n2->m_position-m_n4->m_position;
@@ -72,13 +101,10 @@ void Element::setBeta(){
     m_beta = m_beta.inverse().eval();
 }
 
-Vector3f Element::addForces(Matrix3f dx_du, Matrix3f stress, shared_ptr<Node> n1, std::vector<shared_ptr<Node>> nodes){
+float Element::setArea(std::vector<std::shared_ptr<Node>> nodes){
     Vector3f A = nodes[0]->m_position;
     Vector3f B = nodes[1]->m_position;
     Vector3f C = nodes[2]->m_position;
-//    std::cout << A <<std::endl;
-//    std::cout << B <<std::endl;
-//    std::cout << C <<std::endl;
 
     float ab = (B-A).norm();
     float bc = (C-B).norm();
@@ -86,28 +112,45 @@ Vector3f Element::addForces(Matrix3f dx_du, Matrix3f stress, shared_ptr<Node> n1
     float s = (ab+bc+ca)/2.f;
 
     float area = sqrt(s*(s-ab)*(s-bc)*(s-ca));
+    return area;
+}
 
-    Vector3f AB = B-A;
-    Vector3f AC = C-A;
-    Vector3f normal = AB.cross(AC);
-    normal.normalize();
-    Vector3f centroid = (A+B+C)/3.f;
-    Vector3f oppose = centroid - n1->m_position;
-    oppose.normalize();
+//Vector3f Element::addForces(Matrix3f dx_du, Matrix3f stress, Vector3f normal){
+//    Vector3f A = nodes[0]->m_position;
+//    Vector3f B = nodes[1]->m_position;
+//    Vector3f C = nodes[2]->m_position;
+//    std::cout << A <<std::endl;
+//    std::cout << B <<std::endl;
+//    std::cout << C <<std::endl;
 
-    if (normal.dot(oppose) < 0.f){
-        normal = -normal;
-    }
+//    float ab = (B-A).norm();
+//    float bc = (C-B).norm();
+//    float ca = (A-C).norm();
+//    float s = (ab+bc+ca)/2.f;
+
+//    float area = sqrt(s*(s-ab)*(s-bc)*(s-ca));
+
+//    Vector3f AB = B-A;
+//    Vector3f AC = C-A;
+//    Vector3f normal = AB.cross(AC);
+//    normal.normalize();
+//    Vector3f centroid = (A+B+C)/3.f;
+//    Vector3f oppose = centroid - n1->m_position;
+//    oppose.normalize();
+
+//    if (normal.dot(oppose) < 0.f){
+//        normal = -normal;
+//    }
 
 //    std::cout << dx_du << std::endl;
 //    std::cout << stress <<std::endl;
 //    std::cout << normal <<std::endl;
 
-    Vector3f f = dx_du*stress*area*normal;
+//    Vector3f f = dx_du*stress*area*normal;
 
 //    std::cout << f <<std::endl;
-    return f;
-}
+//    return f;
+//}
 
 void Element::updateForces(){
     Vector3f p1 = m_n1->m_position-m_n4->m_position;
@@ -148,8 +191,13 @@ void Element::updateForces(){
 
 //    std::cout << "V: " << V <<std::endl;
 
-    m_n1->m_force += addForces(dx_du, stress, m_n1, std::vector<shared_ptr<Node>>{m_n2, m_n3, m_n4});
-    m_n2->m_force += addForces(dx_du, stress, m_n2, std::vector<shared_ptr<Node>>{m_n1, m_n3, m_n4});
-    m_n3->m_force += addForces(dx_du, stress, m_n3, std::vector<shared_ptr<Node>>{m_n2, m_n1, m_n4});
-    m_n4->m_force += addForces(dx_du, stress, m_n4, std::vector<shared_ptr<Node>>{m_n2, m_n3, m_n1});
+//    m_n1->m_force += addForces(dx_du, stress, m_f1normal);
+//    m_n2->m_force += addForces(dx_du, stress, m_f2normal);
+//    m_n3->m_force += addForces(dx_du, stress, m_f3normal);
+//    m_n4->m_force += addForces(dx_du, stress, m_f4normal);
+
+    m_n1->m_force += dx_du*stress*f1_area*m_f1normal;
+    m_n2->m_force += dx_du*stress*f2_area*m_f2normal;
+    m_n3->m_force += dx_du*stress*f3_area*m_f3normal;
+    m_n4->m_force += dx_du*stress*f4_area*m_f4normal;
 }

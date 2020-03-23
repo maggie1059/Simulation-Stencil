@@ -180,7 +180,7 @@ void View::keyReleaseEvent(QKeyEvent *event)
 void View::tick()
 {
     float seconds = m_time.restart() * 0.001f;
-//    seconds = 0.01f;
+//    seconds = 0.015f;
     m_sim.update(seconds);
 
     auto look = m_camera.getLook();

@@ -19,13 +19,24 @@ public:
     std::shared_ptr<Node> m_n3;
     std::shared_ptr<Node> m_n4;
     Eigen::Matrix3f m_beta;
+    Eigen::Vector3f m_f1normal;
+    Eigen::Vector3f m_f2normal;
+    Eigen::Vector3f m_f3normal;
+    Eigen::Vector3f m_f4normal;
+
+    float f1_area;
+    float f2_area;
+    float f3_area;
+    float f4_area;
 
     void setMasses();
     void setBeta();
+    Eigen::Vector3f setNormal(std::shared_ptr<Node> n1, std::vector<std::shared_ptr<Node>> nodes);
+    float setArea(std::vector<std::shared_ptr<Node>> nodes);
 //    Eigen::Matrix3f getStress();
 //    void distributeForces();
     void updateForces();
-    Eigen::Vector3f addForces(Eigen::Matrix3f dx_du, Eigen::Matrix3f stress, std::shared_ptr<Node> n1, std::vector<std::shared_ptr<Node>> nodes);
+//    Eigen::Vector3f addForces(Eigen::Matrix3f dx_du, Eigen::Matrix3f stress, Eigen::Vector3f normal);
 };
 
 #endif // ELEMENT_H

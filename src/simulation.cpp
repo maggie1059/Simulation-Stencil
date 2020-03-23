@@ -32,11 +32,39 @@ void Simulation::init()
             m_nodes.push_back(n);
         }
 
+//        std::unordered_map<int, int> nodeappears;
+
         for (auto t : tets){
+//            if (nodeappears.find(t[0]) == nodeappears.end()){
+//                nodeappears[t[0]] = 1;
+//            } else {
+//                nodeappears[t[0]]++;
+//            }
+//            if (nodeappears.find(t[1]) == nodeappears.end()){
+//                nodeappears[t[1]] = 1;
+//            } else {
+//                nodeappears[t[1]]++;
+//            }
+//            if (nodeappears.find(t[2]) == nodeappears.end()){
+//                nodeappears[t[2]] = 1;
+//            } else {
+//                nodeappears[t[2]]++;
+//            }
+//            if (nodeappears.find(t[3]) == nodeappears.end()){
+//                nodeappears[t[3]] = 1;
+//            } else {
+//                nodeappears[t[3]]++;
+//            }
             shared_ptr<Element> e(new Element(m_nodes[t[0]], m_nodes[t[1]], m_nodes[t[2]], m_nodes[t[3]]));
-            e->setMasses();
+//            e->setMasses();
             m_elements.push_back(e);
         }
+
+//        for (int i = 0; i < vertices.size(); i++){
+//            shared_ptr<Node> v = m_nodes[i];
+//            float mass = v->m_mass/nodeappears[i];
+//            std::cout << mass << std::endl;
+//        }
 
         for (auto i : tets){
             Vector3i face1(i[1], i[0], i[2]);
@@ -128,10 +156,16 @@ void Simulation::update(float seconds)
 //    for (shared_ptr<Node> i : m_nodes){
     for (int k = 0; k < m_nodes.size(); k++){
         shared_ptr<Node> i = m_nodes[k];
+//        sphereInfo check = checkSphereCollision(i->m_position);
+//        if (check.intersect){
+//            std::cout << "hi" <<std::endl;
+//            i->m_force -= (i->m_force.norm()/3.f)*(1.f+(0.2f*check.depth))*check.normal;
+//        }
         if (GRAVITY_ON && i->m_position[1] <= -2.f){
             Vector3f normal(0, 1.f, 0);
 //            i->m_force[1] -= i->m_force[1]*(1.f+(-2.f - i->m_position[1]));
             i->m_force += abs(i->m_force[1])*(1.f+(0.2f*(-2.f - i->m_position[1])))*normal; //instead of m_force.norm()
+//            i->m_force = reflect(i->m_force, normal);
 //            i->m_force[1] *= -1;
 //            i->m_force[1] = 0.f;
         }
@@ -139,7 +173,7 @@ void Simulation::update(float seconds)
         oldPosV.push_back(i->m_position);
         oldVelV.push_back(i->m_velocity);
 
-        i->m_position = i->m_position + 0.5*seconds*i->m_velocity;
+//        i->m_position = i->m_position + 0.5*seconds*i->m_velocity;
 //        if (GRAVITY_ON && i->m_position[1] <= -2.f){
 //            i->m_velocity *= -1;
 
@@ -152,6 +186,7 @@ void Simulation::update(float seconds)
     }
 
     updateForces();
+    Vector3f prevA(0,0,0);
 
 //    for (shared_ptr<Node> i : m_nodes){
     for (int k = 0; k < m_nodes.size(); k++){
@@ -160,6 +195,7 @@ void Simulation::update(float seconds)
 //            i->m_force[1] -= i->m_force[1]*(1.f+(-2.f - i->m_position[1]));
             Vector3f normal(0, 1.f, 0);
             i->m_force += abs(i->m_force[1])*(1.f+(0.2f*(-2.f - i->m_position[1])))*normal;
+//            i->m_force = reflect(i->m_force, normal);
 //            i->m_force[1] *= -1;
 //            i->m_force[1] = 0.f;
         }
@@ -186,14 +222,22 @@ void Simulation::update(float seconds)
 //            std::cout << "newPos: " << i->m_position <<std::endl;
 //            std::cout << "newVel: " << i->m_velocity <<std::endl;
 //        }
-        if (k==0){
-            std::cout << "force: " << i->m_force << std::endl;
-        }
+//        if (k==0 && i->m_force[1] != -116){
+//        if (a != prevA && abs(a[1] - prevA[1]) > 0.02f && prevA[1] != 0.f){
+//            std::cout << "prev: " << prevA << std::endl;
+//            std::cout << "accel: " << a << std::endl;
+//        }
 
         vertices.push_back(i->m_position);
+//        prevA = a;
     }
 
     m_shape.setVertices(vertices); //should prob set normals too
+}
+
+Vector3f Simulation::reflect(Vector3f in, Vector3f n){
+    Vector3f out = in - (2*in.dot(n)*n);
+    return out;
 }
 
 void Simulation::updateForces(){
@@ -257,4 +301,22 @@ void Simulation::initGround()
     groundFaces.emplace_back(Vector3i(0, 1, 2));
     groundFaces.emplace_back(Vector3i(0, 2, 3));
     m_ground.init(groundVerts, groundFaces);
+}
+
+//if distance between point and center of sphere < sphere's radius -> intersection
+//adjust force by that distance
+//normal = <2x, 2y, 2z> (just use node's position and hope for the best!)
+sphereInfo Simulation::checkSphereCollision(Vector3f position){
+    bool intersect = false;
+    Vector3f normal(0,0,0);
+
+    Vector3f sphereCenter(0.f, -2.f, 0.f);
+    float radius = 1.f;
+    float depth = abs((position-sphereCenter).norm());
+    if (depth <= radius){
+        intersect = true;
+        normal = 2*position;
+        normal.normalize();
+    }
+    return sphereInfo{intersect, normal, depth};
 }
