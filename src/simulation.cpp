@@ -20,7 +20,7 @@ void Simulation::init()
     //    load up a tet mesh based on e.g. a file path specified with a command line argument.
     std::vector<Vector3f> vertices;
     std::vector<Vector4i> tets;
-    if(MeshLoader::loadTetMesh("example-meshes/cube.mesh", vertices, tets)) {
+    if(MeshLoader::loadTetMesh("example-meshes/sphere.mesh", vertices, tets)) {
         // STUDENTS: This code computes the surface mesh of the loaded tet mesh, i.e. the faces
         //    of tetrahedra which are on the exterior surface of the object. Right now, this is
         //    hard-coded for the single-tet mesh. You'll need to implement surface mesh extraction
@@ -122,27 +122,30 @@ void Simulation::update(float seconds)
 
     std::vector<Vector3f> vertices;
 
-    std::vector<Vector3f> oldPos;
-    std::vector<Vector3f> oldVel;
+    std::vector<Vector3f> oldPosV;
+    std::vector<Vector3f> oldVelV;
 
-    for (shared_ptr<Node> i : m_nodes){
+//    for (shared_ptr<Node> i : m_nodes){
+    for (int k = 0; k < m_nodes.size(); k++){
+        shared_ptr<Node> i = m_nodes[k];
         if (GRAVITY_ON && i->m_position[1] <= -2.f){
             Vector3f normal(0, 1.f, 0);
 //            i->m_force[1] -= i->m_force[1]*(1.f+(-2.f - i->m_position[1]));
-            i->m_force += abs(i->m_force.norm())*(1.f+(1*(-2.f - i->m_position[1])))*normal;
-
+            i->m_force += abs(i->m_force[1])*(1.f+(0.2f*(-2.f - i->m_position[1])))*normal; //instead of m_force.norm()
+//            i->m_force[1] *= -1;
+//            i->m_force[1] = 0.f;
         }
         Vector3f a = i->m_force/i->m_mass;
-        Vector3f oldPos = i->m_position;
-        Vector3f oldVel = i->m_velocity;
+        oldPosV.push_back(i->m_position);
+        oldVelV.push_back(i->m_velocity);
 
-        i->m_position = oldPos + 0.5*seconds*oldVel;
-        if (GRAVITY_ON && i->m_position[1] <= -2.f){
-            i->m_velocity *= -1;
+        i->m_position = i->m_position + 0.5*seconds*i->m_velocity;
+//        if (GRAVITY_ON && i->m_position[1] <= -2.f){
+//            i->m_velocity *= -1;
 
-        } else {
-            i->m_velocity = oldVel + 0.5*seconds*a;
-        }
+//        } else {
+            i->m_velocity = i->m_velocity + 0.5*seconds*a;
+//        }
 
 //        i->m_position = oldPos + 0.5*seconds*oldVel;
 //        i->m_velocity = oldVel + 0.5*seconds*a;
@@ -150,26 +153,42 @@ void Simulation::update(float seconds)
 
     updateForces();
 
-    for (shared_ptr<Node> i : m_nodes){
+//    for (shared_ptr<Node> i : m_nodes){
+    for (int k = 0; k < m_nodes.size(); k++){
+        shared_ptr<Node> i = m_nodes[k];
         if (GRAVITY_ON && i->m_position[1] <= -2.f){
-//            i->m_force[1] -= i->m_force[1]*(2.f+(-1.f - i->m_position[1]));
+//            i->m_force[1] -= i->m_force[1]*(1.f+(-2.f - i->m_position[1]));
             Vector3f normal(0, 1.f, 0);
-            i->m_force += abs(i->m_force.norm())*(1.f+(1*(-2.f - i->m_position[1])))*normal;
+            i->m_force += abs(i->m_force[1])*(1.f+(0.2f*(-2.f - i->m_position[1])))*normal;
+//            i->m_force[1] *= -1;
+//            i->m_force[1] = 0.f;
         }
         Vector3f a = i->m_force/i->m_mass;
-        Vector3f oldPos = i->m_position;
-        Vector3f oldVel = i->m_velocity;
+        Vector3f oldPos = oldPosV[k];//i->m_position;
+        Vector3f oldVel = oldVelV[k];//i->m_velocity;
 
-        i->m_position = oldPos + 0.5*seconds*oldVel;
-        i->m_velocity = oldVel + 0.5*seconds*a;
+        i->m_position = oldPos + 0.5*seconds*i->m_velocity;
+//        i->m_velocity = oldVel + 0.5*seconds*a;
 
 //        i->m_position = oldPos + 0.5*seconds*oldVel;
-//        if (GRAVITY_ON && i->m_position[1] <= -2.f){
-//            i->m_velocity *= -1;
 
-//        } else {
-//            i->m_velocity = oldVel + 0.5*seconds*a;
+        if (GRAVITY_ON && i->m_position[1] <= -2.f){
+            i->m_velocity *= -1;
+
+        } else {
+            i->m_velocity = oldVel + 0.5*seconds*a;
+        }
+
+//        if (abs((oldPos - i->m_position).norm()) > 1.f){
+//            std::cout << "oldPos: " << oldPos <<std::endl;
+//            std::cout << "oldVel: " << oldVel <<std::endl;
+//            std::cout << "force: " << i->m_force <<std::endl;
+//            std::cout << "newPos: " << i->m_position <<std::endl;
+//            std::cout << "newVel: " << i->m_velocity <<std::endl;
 //        }
+        if (k==0){
+            std::cout << "force: " << i->m_force << std::endl;
+        }
 
         vertices.push_back(i->m_position);
     }

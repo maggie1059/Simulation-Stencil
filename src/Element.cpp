@@ -2,10 +2,10 @@
 #include <iostream>
 #include <memory>
 #define DENSITY 1200.f
-#define PHI 10.f //incompressibility for viscosity
-#define PSI 10.f //rigidity for viscosity
-#define LAMBDA 1e2f //incompressibility
-#define MU 1e2f //rigidity
+#define PHI 5.f //incompressibility for viscosity
+#define PSI 5.f //rigidity for viscosity
+#define LAMBDA 1e3 //incompressibility
+#define MU 1e3 //rigidity
 
 using namespace Eigen;
 
@@ -119,17 +119,13 @@ void Element::updateForces(){
     Vector3f v3 = m_n3->m_velocity-m_n4->m_velocity;
 
     Matrix3f P;
-//    P << p1[0], p1[1], p1[2],
-//            p2[0], p2[1], p2[2],
-//            p3[0], p3[1], p3[2];
+
     P << p1[0], p2[0], p3[0],
             p1[1], p2[1], p3[1],
             p1[2], p2[2], p3[2];
 
     Matrix3f V;
-//    V << v1[0], v1[1], v1[2],
-//            v2[0], v2[1], v2[2],
-//            v3[0], v3[1], v3[2];
+
     V << v1[0], v2[0], v3[0],
             v1[1], v2[1], v3[1],
             v1[2], v2[2], v3[2];
@@ -142,7 +138,15 @@ void Element::updateForces(){
     Matrix3f stress2 = (PHI*Matrix3f::Identity()*strain2.trace()) + (2*PSI*strain2);
     Matrix3f stress = stress1 + stress2;
 
-//    std::cout << strain <<std::endl;
+//    std::cout << "stress1: " << stress1 <<std::endl;
+//    std::cout << "stress2: " <<stress2 << std::endl;
+//    std::cout << "P: " << P <<std::endl;
+//    std::cout << "node 1: " << m_n1->m_position <<std::endl;
+//    std::cout << "node 2: " << m_n2->m_position <<std::endl;
+//    std::cout << "node 3: " << m_n3->m_position <<std::endl;
+//    std::cout << "node 4: " << m_n4->m_position <<std::endl;
+
+//    std::cout << "V: " << V <<std::endl;
 
     m_n1->m_force += addForces(dx_du, stress, m_n1, std::vector<shared_ptr<Node>>{m_n2, m_n3, m_n4});
     m_n2->m_force += addForces(dx_du, stress, m_n2, std::vector<shared_ptr<Node>>{m_n1, m_n3, m_n4});
