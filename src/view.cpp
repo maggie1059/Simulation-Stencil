@@ -181,7 +181,7 @@ void View::tick()
 {
     float seconds = m_time.restart() * 0.001f;
     seconds = 0.015f;
-    m_sim.update(seconds);
+    m_sim.updateRK4(seconds);
 
     auto look = m_camera.getLook();
     look.y() = 0;

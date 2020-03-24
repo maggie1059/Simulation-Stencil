@@ -1,8 +1,9 @@
 #include "simulation.h"
 #include <iostream>
 #include "graphics/MeshLoader.h"
-#define GRAVITY -1.f
+#define GRAVITY -2.f
 #define GRAVITY_ON true
+#define SPHERE_ON true
 
 using namespace Eigen;
 
@@ -20,7 +21,7 @@ void Simulation::init()
     //    load up a tet mesh based on e.g. a file path specified with a command line argument.
     std::vector<Vector3f> vertices;
     std::vector<Vector4i> tets;
-    if(MeshLoader::loadTetMesh("example-meshes/ellipsoid.mesh", vertices, tets)) {
+    if(MeshLoader::loadTetMesh("example-meshes/sphere.mesh", vertices, tets)) {
         // STUDENTS: This code computes the surface mesh of the loaded tet mesh, i.e. the faces
         //    of tetrahedra which are on the exterior surface of the object. Right now, this is
         //    hard-coded for the single-tet mesh. You'll need to implement surface mesh extraction
@@ -87,11 +88,9 @@ void Simulation::init()
             int zero = std::get<0>(f);
             int one = std::get<1>(f);
             int two = std::get<2>(f);
-//            std::cout<< zero << " " << one << " " << two << std::endl;
             Vector3i face(zero, one, two);
             Vector3i newface = turnClockwise(face, fourths[f], vertices);
             faces.emplace_back(newface);
-//            std::cout<< "new: " << newface[0] << " " << newface[1] << " " << newface[2] << std::endl;
         }
         m_shape.init(vertices, faces, tets);
     }
@@ -99,10 +98,13 @@ void Simulation::init()
 
     initGround();
 
-//    std::cout << m_nodes[1]->m_position << std::endl;
-//    m_nodes[0]->m_position += Vector3f(0,0.1f,0);
+    if (SPHERE_ON){
+        initSphere();
+    }
+
+//        m_nodes[0]->m_position += Vector3f(0,0.1f,0);
 //    for (shared_ptr<Node> i : m_nodes){
-//        i->m_position -= Vector3f(0,1.f,0);
+//        i->m_position += Vector3f(0,1.f,0);
 //    }
 }
 
@@ -124,91 +126,175 @@ void Simulation::update(float seconds)
     std::vector<Vector3f> oldPosV;
     std::vector<Vector3f> oldVelV;
 
-//    for (shared_ptr<Node> i : m_nodes){
     for (int k = 0; k < m_nodes.size(); k++){
         shared_ptr<Node> i = m_nodes[k];
-//        sphereInfo check = checkSphereCollision(i->m_position);
-//        if (check.intersect){
-//            std::cout << "hi" <<std::endl;
-//            i->m_force -= (i->m_force.norm()/3.f)*(1.f+(0.2f*check.depth))*check.normal;
-//        }
+        sphereInfo check{false, Vector3f(0,0,0), 0};
+
+        if (SPHERE_ON){
+            check = checkSphereCollision(i->m_position);
+            if (check.intersect){
+                i->m_force -= (i->m_force.norm())*(1.f+(0.2f*check.depth))*check.normal;
+            }
+        }
+
         if (GRAVITY_ON && i->m_position[1] <= -2.f){
             Vector3f normal(0, 1.f, 0);
-//            i->m_force[1] -= i->m_force[1]*(1.f+(-2.f - i->m_position[1]));
             i->m_force += abs(i->m_force[1])*(1.f+(0.2f*(-2.f - i->m_position[1])))*normal; //instead of m_force.norm()
-//            i->m_force = reflect(i->m_force, normal);
-//            i->m_force[1] *= -1;
-//            i->m_force[1] = 0.f;
         }
         Vector3f a = i->m_force/i->m_mass;
         oldPosV.push_back(i->m_position);
         oldVelV.push_back(i->m_velocity);
 
-//        i->m_position = i->m_position + 0.5*seconds*i->m_velocity;
-//        if (GRAVITY_ON && i->m_position[1] <= -2.f){
-//            i->m_velocity *= -1;
-
-//        } else {
-            i->m_velocity = i->m_velocity + 0.5*seconds*a;
-//        }
-
-//        i->m_position = oldPos + 0.5*seconds*oldVel;
-//        i->m_velocity = oldVel + 0.5*seconds*a;
+        i->m_position = i->m_position + 0.5*seconds*i->m_velocity;
+        i->m_velocity = i->m_velocity + 0.5*seconds*a;
     }
 
     updateForces();
-    Vector3f prevA(0,0,0);
 
-//    for (shared_ptr<Node> i : m_nodes){
     for (int k = 0; k < m_nodes.size(); k++){
         shared_ptr<Node> i = m_nodes[k];
+
+        sphereInfo check{false, Vector3f(0,0,0), 0};
+
+        if (SPHERE_ON){
+            check = checkSphereCollision(i->m_position);
+            if (check.intersect){
+                i->m_force -= (i->m_force.norm())*(1.f+(0.2f*check.depth))*check.normal;
+            }
+        }
         if (GRAVITY_ON && i->m_position[1] <= -2.f){
 //            i->m_force[1] -= i->m_force[1]*(1.f+(-2.f - i->m_position[1]));
             Vector3f normal(0, 1.f, 0);
             i->m_force += abs(i->m_force[1])*(1.f+(0.2f*(-2.f - i->m_position[1])))*normal;
-//            i->m_force = reflect(i->m_force, normal);
-//            i->m_force[1] *= -1;
-//            i->m_force[1] = 0.f;
         }
         Vector3f a = i->m_force/i->m_mass;
-        Vector3f oldPos = oldPosV[k];//i->m_position;
-        Vector3f oldVel = oldVelV[k];//i->m_velocity;
+        Vector3f oldPos = oldPosV[k];
+        Vector3f oldVel = oldVelV[k];
 
         i->m_position = oldPos + 0.5*seconds*i->m_velocity;
-//        i->m_velocity = oldVel + 0.5*seconds*a;
-
-//        i->m_position = oldPos + 0.5*seconds*oldVel;
 
         if (GRAVITY_ON && i->m_position[1] <= -2.f){
             i->m_velocity *= -1;
-
+        } else if (SPHERE_ON && check.intersect){
+            i->m_velocity *= -1;
         } else {
             i->m_velocity = oldVel + 0.5*seconds*a;
         }
-
-//        if (abs((oldPos - i->m_position).norm()) > 1.f){
-//            std::cout << "oldPos: " << oldPos <<std::endl;
-//            std::cout << "oldVel: " << oldVel <<std::endl;
-//            std::cout << "force: " << i->m_force <<std::endl;
-//            std::cout << "newPos: " << i->m_position <<std::endl;
-//            std::cout << "newVel: " << i->m_velocity <<std::endl;
-//        }
-//        if (k==0 && i->m_force[1] != -116){
-//        if (a != prevA && abs(a[1] - prevA[1]) > 0.02f && prevA[1] != 0.f){
-//            std::cout << "prev: " << prevA << std::endl;
-//            std::cout << "accel: " << a << std::endl;
-//        }
-
         vertices.push_back(i->m_position);
-//        prevA = a;
     }
-
-    m_shape.setVertices(vertices); //should prob set normals too
+    m_shape.setVertices(vertices);
 }
 
-Vector3f Simulation::reflect(Vector3f in, Vector3f n){
-    Vector3f out = in - (2*in.dot(n)*n);
-    return out;
+void Simulation::updateRK4(float seconds) {
+    updateForces();
+
+    std::vector<Vector3f> vertices;
+
+    std::vector<Vector3f> oldPosV;
+    std::vector<Vector3f> vel0;
+    std::vector<Vector3f> vel1;
+    std::vector<Vector3f> vel2;
+
+    for (int k = 0; k < m_nodes.size(); k++){
+        shared_ptr<Node> i = m_nodes[k];
+        sphereInfo check{false, Vector3f(0,0,0), 0};
+        if (GRAVITY_ON && i->m_position[1] <= -2.f){
+            Vector3f normal(0, 1.f, 0);
+            i->m_force += abs(i->m_force[1])*(1.f+(0.2f*(-2.f - i->m_position[1])))*normal;
+        }
+        if (SPHERE_ON){
+            check = checkSphereCollision(i->m_position);
+            if (check.intersect){
+                i->m_force -= (i->m_force.norm())*(1.f+(0.2f*check.depth))*check.normal;
+            }
+        }
+        Vector3f a = i->m_force/i->m_mass;
+        oldPosV.push_back(i->m_position);
+        vel0.push_back(i->m_velocity);
+
+        i->m_position = i->m_position + 0.5*seconds*i->m_velocity;
+        i->m_velocity = i->m_velocity + 0.5*seconds*a;
+    }
+
+    updateForces();
+
+    for (int k = 0; k < m_nodes.size(); k++){
+        shared_ptr<Node> i = m_nodes[k];
+        sphereInfo check{false, Vector3f(0,0,0), 0};
+        if (GRAVITY_ON && i->m_position[1] <= -2.f){
+            Vector3f normal(0, 1.f, 0);
+            i->m_force += abs(i->m_force[1])*(1.f+(0.2f*(-2.f - i->m_position[1])))*normal;
+        }
+        if (SPHERE_ON){
+            check = checkSphereCollision(i->m_position);
+            if (check.intersect){
+                i->m_force -= (i->m_force.norm())*(1.f+(0.2f*check.depth))*check.normal;
+            }
+        }
+        Vector3f a = i->m_force/i->m_mass;
+        Vector3f oldPos = oldPosV[k];
+        Vector3f oldVel = vel0[k];
+        vel1.push_back(i->m_velocity);
+
+        i->m_position = oldPos + 0.5*seconds*i->m_velocity;
+        i->m_velocity = oldVel + 0.5*seconds*a;
+    }
+
+    updateForces();
+
+    for (int k = 0; k < m_nodes.size(); k++){
+        shared_ptr<Node> i = m_nodes[k];
+        sphereInfo check{false, Vector3f(0,0,0), 0};
+        if (GRAVITY_ON && i->m_position[1] <= -2.f){
+            Vector3f normal(0, 1.f, 0);
+            i->m_force += abs(i->m_force[1])*(1.f+(0.2f*(-2.f - i->m_position[1])))*normal;
+        }
+        if (SPHERE_ON){
+            check = checkSphereCollision(i->m_position);
+            if (check.intersect){
+                i->m_force -= (i->m_force.norm())*(1.f+(0.2f*check.depth))*check.normal;
+            }
+        }
+        Vector3f a = i->m_force/i->m_mass;
+        Vector3f oldPos = oldPosV[k];
+        Vector3f oldVel = vel0[k];
+        vel2.push_back(i->m_velocity);
+
+        i->m_position = oldPos + seconds*i->m_velocity;
+        i->m_velocity = oldVel + 0.5*seconds*a;
+    }
+
+    updateForces();
+
+    for (int k = 0; k < m_nodes.size(); k++){
+        shared_ptr<Node> i = m_nodes[k];
+        sphereInfo check{false, Vector3f(0,0,0), 0};
+        if (GRAVITY_ON && i->m_position[1] <= -2.f){
+            Vector3f normal(0, 1.f, 0);
+            i->m_force += abs(i->m_force[1])*(1.f+(0.2f*(-2.f - i->m_position[1])))*normal;
+        }
+        if (SPHERE_ON){
+            check = checkSphereCollision(i->m_position);
+            if (check.intersect){
+                i->m_force -= (i->m_force.norm())*(1.f+(0.2f*check.depth))*check.normal;
+            }
+        }
+        Vector3f a = i->m_force/i->m_mass;
+        Vector3f oldPos = oldPosV[k];
+        Vector3f oldVel = vel0[k];
+
+        i->m_position = oldPos + seconds*((vel0[k] + (2*vel1[k]) + (2*vel2[k]) + i->m_velocity)/6.f);
+        if (GRAVITY_ON && i->m_position[1] <= -2.f){
+            i->m_velocity *= -1;
+        } else if (SPHERE_ON && check.intersect){
+            i->m_velocity *= -1;
+        } else {
+            i->m_velocity = oldVel + seconds*a;
+        }
+
+        vertices.push_back(i->m_position);
+    }
+    m_shape.setVertices(vertices);
 }
 
 void Simulation::updateForces(){
@@ -229,6 +315,11 @@ void Simulation::updateForces(){
             e->m_n4->m_force += Vector3f(0, GRAVITY, 0);
         }
     }
+}
+
+Vector3f Simulation::reflect(Vector3f in, Vector3f n){
+    Vector3f out = in - (2*in.dot(n)*n);
+    return out;
 }
 
 Vector3i Simulation::turnClockwise(Vector3i &face, int f, std::vector<Vector3f> const &vertices){
@@ -253,6 +344,9 @@ Vector3i Simulation::turnClockwise(Vector3i &face, int f, std::vector<Vector3f> 
 void Simulation::draw(Shader *shader)
 {
     m_shape.draw(shader);
+    if (SPHERE_ON){
+        m_sphere.draw(shader);
+    }
     m_ground.draw(shader);
 }
 
@@ -272,6 +366,82 @@ void Simulation::initGround()
     groundFaces.emplace_back(Vector3i(0, 1, 2));
     groundFaces.emplace_back(Vector3i(0, 2, 3));
     m_ground.init(groundVerts, groundFaces);
+}
+
+void Simulation::initSphere(){
+    std::vector<Vector3f> vertices;
+    std::vector<Vector4i> tets;
+    std::vector<shared_ptr<Node>> nodes;
+    std::vector<shared_ptr<Element>> elements;
+    std::unordered_map<std::tuple<int, int, int>, int, hash_tuple> surface;
+    std::unordered_map<std::tuple<int, int, int>, int, hash_tuple> fourths2;
+    if(MeshLoader::loadTetMesh("example-meshes/sphere.mesh", vertices, tets)) {
+        for (auto v : vertices){
+            shared_ptr<Node> n(new Node(v));
+            nodes.push_back(n);
+        }
+
+        for (auto t : tets){
+            shared_ptr<Element> e(new Element(nodes[t[0]], nodes[t[1]], nodes[t[2]], nodes[t[3]]));
+            elements.push_back(e);
+        }
+
+        for (auto i : tets){
+            Vector3i face1(i[1], i[0], i[2]);
+            Vector3i face2(i[2], i[0], i[3]);
+            Vector3i face3(i[3], i[1], i[2]);
+            Vector3i face4(i[3], i[0], i[1]);
+            std::sort(face1.data(), face1.data()+face1.size(), std::less<int>());
+            std::sort(face2.data(), face2.data()+face2.size(), std::less<int>());
+            std::sort(face3.data(), face3.data()+face3.size(), std::less<int>());
+            std::sort(face4.data(), face4.data()+face4.size(), std::less<int>());
+
+            auto result1 = std::make_tuple(face1[0], face1[1], face1[2]);
+            auto result2 = std::make_tuple(face2[0], face2[1], face2[2]);
+            auto result3 = std::make_tuple(face3[0], face3[1], face3[2]);
+            auto result4 = std::make_tuple(face4[0], face4[1], face4[2]);
+
+            if (surface.find(result1) == surface.end()){
+                surface[result1] = 1;
+                fourths2[result1] = i[3];
+            } else {
+                surface[result1]++;
+            }
+            if (surface.find(result2) == surface.end()){
+                surface[result2] = 1;
+                fourths2[result2] = i[1];
+            } else {
+                surface[result2]++;
+            }
+            if (surface.find(result3) == surface.end()){
+                surface[result3] = 1;
+                fourths2[result3] = i[0];
+            } else {
+                surface[result3]++;
+            }
+            if (surface.find(result4) == surface.end()){
+                surface[result4] = 1;
+                fourths2[result4] = i[2];
+            } else {
+                surface[result4]++;
+            }
+        }
+
+        std::vector<Vector3i> faces;
+        for (auto it = surface.begin(); it != surface.end(); ++it){
+            auto f = it->first;
+            if (it->second > 1){
+                continue;
+            }
+            int zero = std::get<0>(f);
+            int one = std::get<1>(f);
+            int two = std::get<2>(f);
+            Vector3i face(zero, one, two);
+            Vector3i newface = turnClockwise(face, fourths2[f], vertices);
+            faces.emplace_back(newface);
+        }
+        m_sphere.init(vertices, faces, tets);
+    }
 }
 
 //if distance between point and center of sphere < sphere's radius -> intersection

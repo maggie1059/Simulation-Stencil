@@ -33,10 +33,7 @@ public:
     void setBeta();
     Eigen::Vector3f setNormal(std::shared_ptr<Node> n1, std::vector<std::shared_ptr<Node>> nodes);
     float setArea(std::vector<std::shared_ptr<Node>> nodes);
-//    Eigen::Matrix3f getStress();
-//    void distributeForces();
     void updateForces();
-//    Eigen::Vector3f addForces(Eigen::Matrix3f dx_du, Eigen::Matrix3f stress, Eigen::Vector3f normal);
 };
 
 #endif // ELEMENT_H

@@ -37,11 +37,9 @@ public:
     Simulation();
 
     void init();
-
     void update(float seconds);
-
+    void updateRK4(float seconds);
     void draw(Shader *shader);
-
     void toggleWire();
     Eigen::Vector3i turnClockwise(Eigen::Vector3i &face, int f, std::vector<Eigen::Vector3f> const &vertices);
     void updateForces();
@@ -51,9 +49,10 @@ public:
 
 private:
     Shape m_shape;
-
+    Shape m_sphere;
     Shape m_ground;
     void initGround();
+    void initSphere();
     std::vector<shared_ptr<Node>> m_nodes;
     std::vector<shared_ptr<Element>> m_elements;
 //    std::unordered_set<std::set<unsigned>> surface;

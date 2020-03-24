@@ -2,8 +2,8 @@
 #include <iostream>
 #include <memory>
 #define DENSITY 1200.f
-#define PHI 5.f //incompressibility for viscosity
-#define PSI 5.f //rigidity for viscosity
+#define PHI 50.f //incompressibility for viscosity
+#define PSI 50.f //rigidity for viscosity
 #define LAMBDA 1e3 //incompressibility
 #define MU 1e3 //rigidity
 
@@ -88,12 +88,6 @@ void Element::setBeta(){
     Vector3f p2 = m_n2->m_position-m_n4->m_position;
     Vector3f p3 = m_n3->m_position-m_n4->m_position;
 
-//    std::cout << p1 << std::endl;
-
-//    m_beta << p1[0], p1[1], p1[2],
-//            p2[0], p2[1], p2[2],
-//            p3[0], p3[1], p3[2];
-
     m_beta << p1[0], p2[0], p3[0],
             p1[1], p2[1], p3[1],
             p1[2], p2[2], p3[2];
@@ -114,43 +108,6 @@ float Element::setArea(std::vector<std::shared_ptr<Node>> nodes){
     float area = sqrt(s*(s-ab)*(s-bc)*(s-ca));
     return area;
 }
-
-//Vector3f Element::addForces(Matrix3f dx_du, Matrix3f stress, Vector3f normal){
-//    Vector3f A = nodes[0]->m_position;
-//    Vector3f B = nodes[1]->m_position;
-//    Vector3f C = nodes[2]->m_position;
-//    std::cout << A <<std::endl;
-//    std::cout << B <<std::endl;
-//    std::cout << C <<std::endl;
-
-//    float ab = (B-A).norm();
-//    float bc = (C-B).norm();
-//    float ca = (A-C).norm();
-//    float s = (ab+bc+ca)/2.f;
-
-//    float area = sqrt(s*(s-ab)*(s-bc)*(s-ca));
-
-//    Vector3f AB = B-A;
-//    Vector3f AC = C-A;
-//    Vector3f normal = AB.cross(AC);
-//    normal.normalize();
-//    Vector3f centroid = (A+B+C)/3.f;
-//    Vector3f oppose = centroid - n1->m_position;
-//    oppose.normalize();
-
-//    if (normal.dot(oppose) < 0.f){
-//        normal = -normal;
-//    }
-
-//    std::cout << dx_du << std::endl;
-//    std::cout << stress <<std::endl;
-//    std::cout << normal <<std::endl;
-
-//    Vector3f f = dx_du*stress*area*normal;
-
-//    std::cout << f <<std::endl;
-//    return f;
-//}
 
 void Element::updateForces(){
     Vector3f p1 = m_n1->m_position-m_n4->m_position;
@@ -180,21 +137,6 @@ void Element::updateForces(){
     Matrix3f strain2 = (dx_du.transpose()*dx_dot_du) + (dx_dot_du.transpose()*dx_du);
     Matrix3f stress2 = (PHI*Matrix3f::Identity()*strain2.trace()) + (2*PSI*strain2);
     Matrix3f stress = stress1 + stress2;
-
-//    std::cout << "stress1: " << stress1 <<std::endl;
-//    std::cout << "stress2: " <<stress2 << std::endl;
-//    std::cout << "P: " << P <<std::endl;
-//    std::cout << "node 1: " << m_n1->m_position <<std::endl;
-//    std::cout << "node 2: " << m_n2->m_position <<std::endl;
-//    std::cout << "node 3: " << m_n3->m_position <<std::endl;
-//    std::cout << "node 4: " << m_n4->m_position <<std::endl;
-
-//    std::cout << "V: " << V <<std::endl;
-
-//    m_n1->m_force += addForces(dx_du, stress, m_f1normal);
-//    m_n2->m_force += addForces(dx_du, stress, m_f2normal);
-//    m_n3->m_force += addForces(dx_du, stress, m_f3normal);
-//    m_n4->m_force += addForces(dx_du, stress, m_f4normal);
 
     m_n1->m_force += dx_du*stress*f1_area*m_f1normal;
     m_n2->m_force += dx_du*stress*f2_area*m_f2normal;
