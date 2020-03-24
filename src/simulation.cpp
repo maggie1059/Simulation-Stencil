@@ -20,7 +20,7 @@ void Simulation::init()
     //    load up a tet mesh based on e.g. a file path specified with a command line argument.
     std::vector<Vector3f> vertices;
     std::vector<Vector4i> tets;
-    if(MeshLoader::loadTetMesh("example-meshes/sphere.mesh", vertices, tets)) {
+    if(MeshLoader::loadTetMesh("example-meshes/ellipsoid.mesh", vertices, tets)) {
         // STUDENTS: This code computes the surface mesh of the loaded tet mesh, i.e. the faces
         //    of tetrahedra which are on the exterior surface of the object. Right now, this is
         //    hard-coded for the single-tet mesh. You'll need to implement surface mesh extraction
@@ -32,39 +32,10 @@ void Simulation::init()
             m_nodes.push_back(n);
         }
 
-//        std::unordered_map<int, int> nodeappears;
-
         for (auto t : tets){
-//            if (nodeappears.find(t[0]) == nodeappears.end()){
-//                nodeappears[t[0]] = 1;
-//            } else {
-//                nodeappears[t[0]]++;
-//            }
-//            if (nodeappears.find(t[1]) == nodeappears.end()){
-//                nodeappears[t[1]] = 1;
-//            } else {
-//                nodeappears[t[1]]++;
-//            }
-//            if (nodeappears.find(t[2]) == nodeappears.end()){
-//                nodeappears[t[2]] = 1;
-//            } else {
-//                nodeappears[t[2]]++;
-//            }
-//            if (nodeappears.find(t[3]) == nodeappears.end()){
-//                nodeappears[t[3]] = 1;
-//            } else {
-//                nodeappears[t[3]]++;
-//            }
             shared_ptr<Element> e(new Element(m_nodes[t[0]], m_nodes[t[1]], m_nodes[t[2]], m_nodes[t[3]]));
-//            e->setMasses();
             m_elements.push_back(e);
         }
-
-//        for (int i = 0; i < vertices.size(); i++){
-//            shared_ptr<Node> v = m_nodes[i];
-//            float mass = v->m_mass/nodeappears[i];
-//            std::cout << mass << std::endl;
-//        }
 
         for (auto i : tets){
             Vector3i face1(i[1], i[0], i[2]);
