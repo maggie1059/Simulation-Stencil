@@ -4,6 +4,9 @@
 #define GRAVITY -2.f
 #define GRAVITY_ON true
 #define SPHERE_ON true
+#define DRAG_ON false
+#define C_d 0.47f
+#define AIR_DENSITY 0.5f
 
 using namespace Eigen;
 
@@ -11,6 +14,7 @@ Simulation::Simulation()
 {
     m_nodes.clear();
     m_elements.clear();
+    drag_surface = 0.f;
 }
 
 void Simulation::init()
@@ -101,11 +105,10 @@ void Simulation::init()
     if (SPHERE_ON){
         initSphere();
     }
-
-//        m_nodes[0]->m_position += Vector3f(0,0.1f,0);
-//    for (shared_ptr<Node> i : m_nodes){
-//        i->m_position += Vector3f(0,1.f,0);
-//    }
+//    m_nodes[0]->m_position += Vector3f(0,0.1f,0);
+    for (shared_ptr<Node> i : m_nodes){
+        i->m_position += Vector3f(0,1.f,0);
+    }
 }
 
 void Simulation::update(float seconds)
@@ -139,7 +142,7 @@ void Simulation::update(float seconds)
 
         if (GRAVITY_ON && i->m_position[1] <= -2.f){
             Vector3f normal(0, 1.f, 0);
-            i->m_force += abs(i->m_force[1])*(1.f+(0.2f*(-2.f - i->m_position[1])))*normal; //instead of m_force.norm()
+            i->m_force += abs(i->m_force[1])*(1.f+(0.2f*(-2.f - i->m_position[1])))*normal;
         }
         Vector3f a = i->m_force/i->m_mass;
         oldPosV.push_back(i->m_position);
@@ -163,7 +166,6 @@ void Simulation::update(float seconds)
             }
         }
         if (GRAVITY_ON && i->m_position[1] <= -2.f){
-//            i->m_force[1] -= i->m_force[1]*(1.f+(-2.f - i->m_position[1]));
             Vector3f normal(0, 1.f, 0);
             i->m_force += abs(i->m_force[1])*(1.f+(0.2f*(-2.f - i->m_position[1])))*normal;
         }
@@ -309,12 +311,30 @@ void Simulation::updateForces(){
         e->updateForces();
 
         if (GRAVITY_ON){
-            e->m_n1->m_force += Vector3f(0, GRAVITY, 0);
-            e->m_n2->m_force += Vector3f(0, GRAVITY, 0);
-            e->m_n3->m_force += Vector3f(0, GRAVITY, 0);
-            e->m_n4->m_force += Vector3f(0, GRAVITY, 0);
+            Vector3f gravity(0, GRAVITY, 0);
+            if (DRAG_ON){
+                Vector3f avgVel = getAvgVelocity();
+                Vector3f drag;
+                drag = C_d*AIR_DENSITY*0.5*drag_surface*avgVel.array().square();
+//                std::cout << "drag: " << drag << std::endl;
+                gravity += drag;
+//                std::cout << "g: " << gravity<<std::endl;
+            }
+            e->m_n1->m_force += gravity;
+            e->m_n2->m_force += gravity;
+            e->m_n3->m_force += gravity;
+            e->m_n4->m_force += gravity;
         }
     }
+}
+
+Vector3f Simulation::getAvgVelocity(){
+    Vector3f avgVel(0,0,0);
+    for (shared_ptr<Node> n : m_nodes){
+        avgVel += n->m_velocity;
+    }
+    avgVel = avgVel/m_nodes.size();
+    return avgVel;
 }
 
 Vector3f Simulation::reflect(Vector3f in, Vector3f n){
@@ -335,10 +355,26 @@ Vector3i Simulation::turnClockwise(Vector3i &face, int f, std::vector<Vector3f> 
     Vector3f oppose = fourth - centroid;
 
     if (normal.dot(oppose) > 0.f){
-        return Vector3i(face[2], face[1], face[0]);
-    } else {
-        return face;
+        normal = -normal;
+        face = Vector3i(face[2], face[1], face[0]);
     }
+
+    if (DRAG_ON){
+        Vector3f down(0, -1.f, 0);
+
+        //area for drag
+        if (normal.dot(down) > 0.f){
+            float ab = (B-A).norm();
+            float bc = (C-B).norm();
+            float ca = (A-C).norm();
+            float s = (ab+bc+ca)/2.f;
+
+            float base = sqrt(s*(s-ab)*(s-bc)*(s-ca));
+            drag_surface += base;
+        }
+    }
+
+    return face;
 }
 
 void Simulation::draw(Shader *shader)
@@ -359,10 +395,10 @@ void Simulation::initGround()
 {
     std::vector<Vector3f> groundVerts;
     std::vector<Vector3i> groundFaces;
-    groundVerts.emplace_back(Vector3f(-5, 0, -5));
-    groundVerts.emplace_back(Vector3f(-5, 0, 5));
-    groundVerts.emplace_back(Vector3f(5, 0, 5));
-    groundVerts.emplace_back(Vector3f(5, 0, -5));
+    groundVerts.emplace_back(Vector3f(-25, 0, -25));
+    groundVerts.emplace_back(Vector3f(-25, 0, 25));
+    groundVerts.emplace_back(Vector3f(25, 0, 25));
+    groundVerts.emplace_back(Vector3f(25, 0, -25));
     groundFaces.emplace_back(Vector3i(0, 1, 2));
     groundFaces.emplace_back(Vector3i(0, 2, 3));
     m_ground.init(groundVerts, groundFaces);
@@ -446,7 +482,6 @@ void Simulation::initSphere(){
 
 //if distance between point and center of sphere < sphere's radius -> intersection
 //adjust force by that distance
-//normal = <2x, 2y, 2z> (just use node's position and hope for the best!)
 sphereInfo Simulation::checkSphereCollision(Vector3f position){
     bool intersect = false;
     Vector3f normal(0,0,0);

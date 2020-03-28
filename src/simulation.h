@@ -51,8 +51,10 @@ private:
     Shape m_shape;
     Shape m_sphere;
     Shape m_ground;
+    float drag_surface;
     void initGround();
     void initSphere();
+    Eigen::Vector3f getAvgVelocity();
     std::vector<shared_ptr<Node>> m_nodes;
     std::vector<shared_ptr<Element>> m_elements;
 //    std::unordered_set<std::set<unsigned>> surface;
