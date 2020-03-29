@@ -25,7 +25,7 @@ void Simulation::init()
     //    load up a tet mesh based on e.g. a file path specified with a command line argument.
     std::vector<Vector3f> vertices;
     std::vector<Vector4i> tets;
-    if(MeshLoader::loadTetMesh("example-meshes/sphere.mesh", vertices, tets)) {
+    if(MeshLoader::loadTetMesh("example-meshes/ellipsoid.mesh", vertices, tets)) {
         // STUDENTS: This code computes the surface mesh of the loaded tet mesh, i.e. the faces
         //    of tetrahedra which are on the exterior surface of the object. Right now, this is
         //    hard-coded for the single-tet mesh. You'll need to implement surface mesh extraction
@@ -173,14 +173,14 @@ void Simulation::update(float seconds)
         Vector3f oldPos = oldPosV[k];
         Vector3f oldVel = oldVelV[k];
 
-        i->m_position = oldPos + 0.5*seconds*i->m_velocity;
+        i->m_position = oldPos + seconds*i->m_velocity;
 
         if (GRAVITY_ON && i->m_position[1] <= -2.f){
             i->m_velocity *= -1;
         } else if (SPHERE_ON && check.intersect){
             i->m_velocity *= -1;
         } else {
-            i->m_velocity = oldVel + 0.5*seconds*a;
+            i->m_velocity = oldVel + seconds*a;
         }
         vertices.push_back(i->m_position);
     }
