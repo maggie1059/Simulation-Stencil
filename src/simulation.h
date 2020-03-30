@@ -36,15 +36,13 @@ class Simulation
 public:
     Simulation();
 
-    void init();
+    void init(const std::string &filePath);
     void update(float seconds);
     void updateRK4(float seconds);
     void draw(Shader *shader);
     void toggleWire();
-    Eigen::Vector3i turnClockwise(Eigen::Vector3i &face, int f, std::vector<Eigen::Vector3f> const &vertices);
+    Eigen::Vector3i turnCounterclockwise(Eigen::Vector3i &face, int f, std::vector<Eigen::Vector3f> const &vertices);
     void updateForces();
-
-    Eigen::Vector3f reflect(Eigen::Vector3f in, Eigen::Vector3f n);
     sphereInfo checkSphereCollision(Eigen::Vector3f position);
 
 private:
@@ -57,9 +55,7 @@ private:
     Eigen::Vector3f getAvgVelocity();
     std::vector<shared_ptr<Node>> m_nodes;
     std::vector<shared_ptr<Element>> m_elements;
-//    std::unordered_set<std::set<unsigned>> surface;
-//    set_of_unique_sets surface;
-//    std::unordered_map<std::string, int> m_surface;
+
     std::unordered_map<std::tuple<int, int, int>, int, hash_tuple> m_surface2;
     std::unordered_map<std::tuple<int, int, int>, int, hash_tuple> fourths;
 };

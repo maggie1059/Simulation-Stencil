@@ -13,6 +13,7 @@ Node::~Node(){
 
 }
 
+//accumulate mass
 void Node::setMass(float mass){
     m_mass += mass;
 }

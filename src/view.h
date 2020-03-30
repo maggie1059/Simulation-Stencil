@@ -39,6 +39,7 @@ private:
     void keyPressEvent(QKeyEvent *event);
     void keyRepeatEvent(QKeyEvent *event);
     void keyReleaseEvent(QKeyEvent *event);
+    void getFilePath();
 
 private:
     QWidget *m_window;
@@ -48,6 +49,8 @@ private:
     Simulation m_sim;
     Camera m_camera;
     Shader *m_shader;
+
+    string m_filepath;
 
     int m_forward, m_sideways, m_vertical;
 

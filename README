@@ -1,7 +1,39 @@
 Simulation README
 
+The program requires one command line argument to run: an input .mesh file. If none is provided, it will default to the sphere mesh. To toggle other features on/off, please change the macros defined at top of the simulation.cpp file and view.cpp file. Parameters for elements are in element.cpp, but I don't recommend changing those (density, phi, psi, lambda, mu) due to volatility. At the top of view.cpp, there is the option to run the simulation using RK4 time integration (simply switch macro to "true"), otherwise default midpoint method time integration is used. At the top of simulation.cpp, there are 3 options to toggle: using gravity, including a rigid sphere obstacle in the scene, and using drag/air resistance. The default includes gravity and the sphere, but not drag. I don't recommend playing with the values of gravity and the air density coefficients. All simulations use a time step of 0.015.
 
-
+Features implemented:
+Surface mesh extraction (in simulation.cpp)
+Gravitational force (in simulation.cpp)
+Internal elastic forces (strain/stress) (in Element.cpp)
+Internal viscous damping forces (in Element.cpp)
+Collisions (with ground plane and sphere) (in simulation.cpp): implemented with sphere. The sphere is by default defined to have radius 1 and center at the origin. I rendered the sphere mesh at this position to visualize the obstacle.
+Midpoint method time integration (in simulation.cpp)
 
 Extra features:
+RK4 time integration (in simulation.cpp): although not included in ./videos, comparing regular integration with RK4 integration on the sphere colliding with the sphere/plane shows less "stickiness" when using RK4.
+Drag (in simulation.cpp): implemented air resistance, which acts on the object as a whole. Generally very difficult to see the difference because air is not that dense and only slows down gravity by a tiny bit, but printing out the forces shows that this decreases force due to gravity pulling the object down. Drag is calculated in updateForces().
+
+Videos (inside videos folder in root directory): Features demonstrated
+All videos:
+	surface mesh extraction
+	internal elastic forces
+	Internal viscous damping forces
+Single-tet_single_point.mp4:
+	Midpoint method
+	For this video, I displaced one vertex from its rest position.
+For the following videos, I shifted the shapes up by 1 unit so they would have more time to accelerate from gravity.
+Ellipsoid_gravity:
+	Gravitational force
+	Collisions
+	Midpoint method
+Sphere_rk4:
+	Gravitational force
+	Collisions
+	RK4 integration
+Sphere_rk4_drag:
+	Gravitational force
+	Collisions
+	RK4 integration
+	Drag/Air resistance
 

@@ -3,9 +3,13 @@
 #include "viewformat.h"
 
 #include <QApplication>
+#include <QCommandLineParser>
+
 #include <QKeyEvent>
 
 #include <iostream>
+
+#define RK4 false
 
 using namespace std;
 
@@ -18,6 +22,7 @@ View::View(QWidget *parent) : QGLWidget(ViewFormat(), parent),
 {
 //    glfwWindowHint(GLFW_TRANSPARENT_FRAMEBUFFER, GLFW_TRUE);
     // View needs all mouse move events, not just mouse drag events
+    getFilePath();
     setMouseTracking(true);
 
     // Hide the cursor since this is a fullscreen app
@@ -49,7 +54,7 @@ void View::initializeGL()
     glClearColor(240.0f/255.0f, 248.0f/255.0f, 255.0f/255.0f, 1);
 
     m_shader = new Shader(":/shaders/shader.vert", ":/shaders/shader.frag");
-    m_sim.init();
+    m_sim.init(m_filepath);
 
     m_camera.setPosition(Eigen::Vector3f(0, 0, 5));
     m_camera.lookAt(Eigen::Vector3f(0, 2, -5), Eigen::Vector3f(0, 2, 0), Eigen::Vector3f(0, 1, 0));
@@ -181,7 +186,11 @@ void View::tick()
 {
     float seconds = m_time.restart() * 0.001f;
     seconds = 0.015f;
-    m_sim.update(seconds);
+    if (RK4){
+        m_sim.updateRK4(seconds);
+    } else {
+        m_sim.update(seconds);
+    }
 
     auto look = m_camera.getLook();
     look.y() = 0;
@@ -192,4 +201,21 @@ void View::tick()
     m_camera.move(moveVec);
     // Flag this view for repainting (Qt will call paintGL() soon after)
     update();
+}
+
+void View::getFilePath(){
+    QCommandLineParser parser;
+    parser.addHelpOption();
+    parser.addPositionalArgument("infile", "Input .mesh file path");
+
+    parser.process(QCoreApplication::arguments());
+
+    const QStringList args = parser.positionalArguments();
+    if(args.size() != 1) {
+        cerr << "Error: Wrong number of arguments" << endl;
+        m_filepath = "example-meshes/sphere.mesh";
+    } else {
+        QString infile = args[0];
+        m_filepath = infile.toStdString();
+    }
 }

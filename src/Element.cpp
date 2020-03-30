@@ -13,6 +13,7 @@ using namespace Eigen;
 Element::Element(shared_ptr<Node> n1, shared_ptr<Node> n2, shared_ptr<Node> n3, shared_ptr<Node> n4)
     : m_n1(n1), m_n2(n2), m_n3(n3), m_n4(n4)
 {
+    //set attributes once at initialization
     setBeta();
     setMasses();
     m_f1normal = setNormal(m_n1, std::vector<shared_ptr<Node>>{m_n2, m_n3, m_n4});
@@ -29,6 +30,7 @@ Element::~Element(){
 
 }
 
+//Set masses of nodes in element (will accumulate, not reset masses for nodes)
 void Element::setMasses(){
     Vector3f A = m_n1->m_position;
     Vector3f B = m_n2->m_position;
@@ -63,6 +65,7 @@ void Element::setMasses(){
     m_n4->setMass(mass);
 }
 
+//Set resting face normals to use for strain calculations later
 Vector3f Element::setNormal(shared_ptr<Node> n1, std::vector<shared_ptr<Node>> nodes){
     Vector3f A = nodes[0]->m_position;
     Vector3f B = nodes[1]->m_position;
@@ -83,6 +86,7 @@ Vector3f Element::setNormal(shared_ptr<Node> n1, std::vector<shared_ptr<Node>> n
     return normal;
 }
 
+//set beta matrix at initialization for use in strain calculations later
 void Element::setBeta(){
     Vector3f p1 = m_n1->m_position-m_n4->m_position;
     Vector3f p2 = m_n2->m_position-m_n4->m_position;
@@ -95,6 +99,7 @@ void Element::setBeta(){
     m_beta = m_beta.inverse().eval();
 }
 
+//set area of face at resting position for use in calculations later
 float Element::setArea(std::vector<std::shared_ptr<Node>> nodes){
     Vector3f A = nodes[0]->m_position;
     Vector3f B = nodes[1]->m_position;
@@ -132,12 +137,16 @@ void Element::updateForces(){
 
     Matrix3f dx_du = P*m_beta;
     Matrix3f dx_dot_du = V*m_beta;
+    //internal elastic strain and stress
     Matrix3f strain = (dx_du.transpose() * dx_du) - Matrix3f::Identity();
     Matrix3f stress1 = (LAMBDA*Matrix3f::Identity()*strain.trace()) + (2*MU*strain);
+    //internal viscous damping forces
     Matrix3f strain2 = (dx_du.transpose()*dx_dot_du) + (dx_dot_du.transpose()*dx_du);
     Matrix3f stress2 = (PHI*Matrix3f::Identity()*strain2.trace()) + (2*PSI*strain2);
+    //total internal stress
     Matrix3f stress = stress1 + stress2;
 
+    //accumulate forces at each node
     m_n1->m_force += dx_du*stress*f1_area*m_f1normal;
     m_n2->m_force += dx_du*stress*f2_area*m_f2normal;
     m_n3->m_force += dx_du*stress*f3_area*m_f3normal;

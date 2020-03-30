@@ -17,7 +17,7 @@ Simulation::Simulation()
     drag_surface = 0.f;
 }
 
-void Simulation::init()
+void Simulation::init(const std::string &filePath)
 {
     // STUDENTS: This code loads up the tetrahedral mesh in 'example-meshes/single-tet.mesh'
     //    (note: your working directory must be set to the root directory of the starter code
@@ -25,7 +25,7 @@ void Simulation::init()
     //    load up a tet mesh based on e.g. a file path specified with a command line argument.
     std::vector<Vector3f> vertices;
     std::vector<Vector4i> tets;
-    if(MeshLoader::loadTetMesh("example-meshes/ellipsoid.mesh", vertices, tets)) {
+    if(MeshLoader::loadTetMesh(filePath, vertices, tets)) {
         // STUDENTS: This code computes the surface mesh of the loaded tet mesh, i.e. the faces
         //    of tetrahedra which are on the exterior surface of the object. Right now, this is
         //    hard-coded for the single-tet mesh. You'll need to implement surface mesh extraction
@@ -42,6 +42,7 @@ void Simulation::init()
             m_elements.push_back(e);
         }
 
+        //hash all faces to isolate surface faces (only appear once)
         for (auto i : tets){
             Vector3i face1(i[1], i[0], i[2]);
             Vector3i face2(i[2], i[0], i[3]);
@@ -83,6 +84,7 @@ void Simulation::init()
             }
         }
 
+        //store surface faces and correct orientation
         std::vector<Vector3i> faces;
         for (auto it = m_surface2.begin(); it != m_surface2.end(); ++it){
             auto f = it->first;
@@ -93,7 +95,7 @@ void Simulation::init()
             int one = std::get<1>(f);
             int two = std::get<2>(f);
             Vector3i face(zero, one, two);
-            Vector3i newface = turnClockwise(face, fourths[f], vertices);
+            Vector3i newface = turnCounterclockwise(face, fourths[f], vertices);
             faces.emplace_back(newface);
         }
         m_shape.init(vertices, faces, tets);
@@ -102,13 +104,17 @@ void Simulation::init()
 
     initGround();
 
+    //initialize sphere obstacle mesh
     if (SPHERE_ON){
         initSphere();
     }
+//see the effects of moving one vertex from rest position (used for video)
 //    m_nodes[0]->m_position += Vector3f(0,0.1f,0);
-    for (shared_ptr<Node> i : m_nodes){
-        i->m_position += Vector3f(0,1.f,0);
-    }
+
+//see the effects of shifting entire shape up (used for video)
+//    for (shared_ptr<Node> i : m_nodes){
+//        i->m_position += Vector3f(0,1.f,0);
+//    }
 }
 
 void Simulation::update(float seconds)
@@ -133,6 +139,7 @@ void Simulation::update(float seconds)
         shared_ptr<Node> i = m_nodes[k];
         sphereInfo check{false, Vector3f(0,0,0), 0};
 
+        //penalty force if collision with sphere
         if (SPHERE_ON){
             check = checkSphereCollision(i->m_position);
             if (check.intersect){
@@ -140,18 +147,22 @@ void Simulation::update(float seconds)
             }
         }
 
+        //penalty force if collision with ground plane
         if (GRAVITY_ON && i->m_position[1] <= -2.f){
             Vector3f normal(0, 1.f, 0);
             i->m_force += abs(i->m_force[1])*(1.f+(0.2f*(-2.f - i->m_position[1])))*normal;
         }
+        //calculate acceleration at old position
         Vector3f a = i->m_force/i->m_mass;
         oldPosV.push_back(i->m_position);
         oldVelV.push_back(i->m_velocity);
 
+        //update midway position and velocity according to midpoint method
         i->m_position = i->m_position + 0.5*seconds*i->m_velocity;
         i->m_velocity = i->m_velocity + 0.5*seconds*a;
     }
 
+    //update forces at midpoint
     updateForces();
 
     for (int k = 0; k < m_nodes.size(); k++){
@@ -169,12 +180,15 @@ void Simulation::update(float seconds)
             Vector3f normal(0, 1.f, 0);
             i->m_force += abs(i->m_force[1])*(1.f+(0.2f*(-2.f - i->m_position[1])))*normal;
         }
+        //get acceleration at new midway point
         Vector3f a = i->m_force/i->m_mass;
         Vector3f oldPos = oldPosV[k];
         Vector3f oldVel = oldVelV[k];
 
+        //update position using old position and new velocity
         i->m_position = oldPos + seconds*i->m_velocity;
 
+        //negate velocity if collision so that obstacles remain as rigid-body obstacles
         if (GRAVITY_ON && i->m_position[1] <= -2.f){
             i->m_velocity *= -1;
         } else if (SPHERE_ON && check.intersect){
@@ -214,6 +228,7 @@ void Simulation::updateRK4(float seconds) {
         oldPosV.push_back(i->m_position);
         vel0.push_back(i->m_velocity);
 
+        //update position/velocity to midpoint
         i->m_position = i->m_position + 0.5*seconds*i->m_velocity;
         i->m_velocity = i->m_velocity + 0.5*seconds*a;
     }
@@ -238,6 +253,7 @@ void Simulation::updateRK4(float seconds) {
         Vector3f oldVel = vel0[k];
         vel1.push_back(i->m_velocity);
 
+        //update to second midpoint using previous midpoint velocity
         i->m_position = oldPos + 0.5*seconds*i->m_velocity;
         i->m_velocity = oldVel + 0.5*seconds*a;
     }
@@ -262,6 +278,7 @@ void Simulation::updateRK4(float seconds) {
         Vector3f oldVel = vel0[k];
         vel2.push_back(i->m_velocity);
 
+        //update one full timestep using second midpoint velocity
         i->m_position = oldPos + seconds*i->m_velocity;
         i->m_velocity = oldVel + 0.5*seconds*a;
     }
@@ -285,6 +302,7 @@ void Simulation::updateRK4(float seconds) {
         Vector3f oldPos = oldPosV[k];
         Vector3f oldVel = vel0[k];
 
+        //set position using weighted average of velocities from previous steps
         i->m_position = oldPos + seconds*((vel0[k] + (2*vel1[k]) + (2*vel2[k]) + i->m_velocity)/6.f);
         if (GRAVITY_ON && i->m_position[1] <= -2.f){
             i->m_velocity *= -1;
@@ -310,15 +328,14 @@ void Simulation::updateForces(){
     for (shared_ptr<Element> e : m_elements){
         e->updateForces();
 
+        //add gravitational and drag force to all nodes (accumulated over shared nodes but divided by accumulated mass in update())
         if (GRAVITY_ON){
             Vector3f gravity(0, GRAVITY, 0);
             if (DRAG_ON){
                 Vector3f avgVel = getAvgVelocity();
                 Vector3f drag;
                 drag = C_d*AIR_DENSITY*0.5*drag_surface*avgVel.array().square();
-//                std::cout << "drag: " << drag << std::endl;
                 gravity += drag;
-//                std::cout << "g: " << gravity<<std::endl;
             }
             e->m_n1->m_force += gravity;
             e->m_n2->m_force += gravity;
@@ -328,6 +345,7 @@ void Simulation::updateForces(){
     }
 }
 
+//gets average velocity of entire object to use for drag equation
 Vector3f Simulation::getAvgVelocity(){
     Vector3f avgVel(0,0,0);
     for (shared_ptr<Node> n : m_nodes){
@@ -337,12 +355,8 @@ Vector3f Simulation::getAvgVelocity(){
     return avgVel;
 }
 
-Vector3f Simulation::reflect(Vector3f in, Vector3f n){
-    Vector3f out = in - (2*in.dot(n)*n);
-    return out;
-}
-
-Vector3i Simulation::turnClockwise(Vector3i &face, int f, std::vector<Vector3f> const &vertices){
+//turns order of nodes in a face counterclockwise for rendering
+Vector3i Simulation::turnCounterclockwise(Vector3i &face, int f, std::vector<Vector3f> const &vertices){
     Vector3f A = vertices[face[0]];
     Vector3f B = vertices[face[1]];
     Vector3f C = vertices[face[2]];
@@ -362,7 +376,7 @@ Vector3i Simulation::turnClockwise(Vector3i &face, int f, std::vector<Vector3f> 
     if (DRAG_ON){
         Vector3f down(0, -1.f, 0);
 
-        //area for drag
+        //surface area for drag accumulated for faces facing down
         if (normal.dot(down) > 0.f){
             float ab = (B-A).norm();
             float bc = (C-B).norm();
@@ -404,6 +418,7 @@ void Simulation::initGround()
     m_ground.init(groundVerts, groundFaces);
 }
 
+//adds sphere mesh for sphere obstacle
 void Simulation::initSphere(){
     std::vector<Vector3f> vertices;
     std::vector<Vector4i> tets;
@@ -473,21 +488,23 @@ void Simulation::initSphere(){
             int one = std::get<1>(f);
             int two = std::get<2>(f);
             Vector3i face(zero, one, two);
-            Vector3i newface = turnClockwise(face, fourths2[f], vertices);
+            Vector3i newface = turnCounterclockwise(face, fourths2[f], vertices);
             faces.emplace_back(newface);
         }
         m_sphere.init(vertices, faces, tets);
     }
 }
 
-//if distance between point and center of sphere < sphere's radius -> intersection
-//adjust force by that distance
 sphereInfo Simulation::checkSphereCollision(Vector3f position){
     bool intersect = false;
     Vector3f normal(0,0,0);
 
+    //define location of sphere
     Vector3f sphereCenter(0.f, -2.f, 0.f);
     float radius = 1.f;
+
+    //if distance between point and center of sphere < sphere's radius -> intersection
+    //adjust force by that distance
     float depth = abs((position-sphereCenter).norm());
     if (depth <= radius){
         intersect = true;
