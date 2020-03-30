@@ -53,9 +53,10 @@ private:
     void initGround();
     void initSphere();
     Eigen::Vector3f getAvgVelocity();
+    void getDragArea(Eigen::Vector3f avgVel);
     std::vector<shared_ptr<Node>> m_nodes;
     std::vector<shared_ptr<Element>> m_elements;
-
+    std::vector<Eigen::Vector3i> m_surface_faces;
     std::unordered_map<std::tuple<int, int, int>, int, hash_tuple> m_surface2;
     std::unordered_map<std::tuple<int, int, int>, int, hash_tuple> fourths;
 };

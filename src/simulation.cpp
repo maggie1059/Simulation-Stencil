@@ -1,12 +1,13 @@
 #include "simulation.h"
 #include <iostream>
 #include "graphics/MeshLoader.h"
-#define GRAVITY -2.f
 #define GRAVITY_ON true
 #define SPHERE_ON true
 #define DRAG_ON false
+#define RECALC_AREA false
+#define GRAVITY -2.f
 #define C_d 0.47f
-#define AIR_DENSITY 0.5f
+#define AIR_DENSITY 2.5f
 
 using namespace Eigen;
 
@@ -14,6 +15,7 @@ Simulation::Simulation()
 {
     m_nodes.clear();
     m_elements.clear();
+    m_surface_faces.clear();
     drag_surface = 0.f;
 }
 
@@ -97,6 +99,7 @@ void Simulation::init(const std::string &filePath)
             Vector3i face(zero, one, two);
             Vector3i newface = turnCounterclockwise(face, fourths[f], vertices);
             faces.emplace_back(newface);
+            m_surface_faces.emplace_back(newface);
         }
         m_shape.init(vertices, faces, tets);
     }
@@ -112,9 +115,9 @@ void Simulation::init(const std::string &filePath)
 //    m_nodes[0]->m_position += Vector3f(0,0.1f,0);
 
 //see the effects of shifting entire shape up (used for video)
-//    for (shared_ptr<Node> i : m_nodes){
-//        i->m_position += Vector3f(0,1.f,0);
-//    }
+    for (shared_ptr<Node> i : m_nodes){
+        i->m_position += Vector3f(0,1.f,0);
+    }
 }
 
 void Simulation::update(float seconds)
@@ -333,8 +336,14 @@ void Simulation::updateForces(){
             Vector3f gravity(0, GRAVITY, 0);
             if (DRAG_ON){
                 Vector3f avgVel = getAvgVelocity();
+                if (RECALC_AREA){
+                    getDragArea(avgVel);
+                }
                 Vector3f drag;
                 drag = C_d*AIR_DENSITY*0.5*drag_surface*avgVel.array().square();
+                avgVel.normalize();
+                //drag acts in direction opposite to velocity of entire object
+                drag = -avgVel * drag.norm();
                 gravity += drag;
             }
             e->m_n1->m_force += gravity;
@@ -389,6 +398,31 @@ Vector3i Simulation::turnCounterclockwise(Vector3i &face, int f, std::vector<Vec
     }
 
     return face;
+}
+
+//get surface area for drag calculations
+void Simulation::getDragArea(Vector3f avgVel){
+    drag_surface = 0;
+    for (auto face : m_surface_faces){
+        Vector3f A = m_nodes[face[0]]->m_position;
+        Vector3f B = m_nodes[face[1]]->m_position;
+        Vector3f C = m_nodes[face[2]]->m_position;
+        Vector3f AB = B-A;
+        Vector3f AC = C-A;
+        Vector3f normal = AB.cross(AC);
+        normal.normalize();
+
+        //surface area for drag accumulated for faces facing direction of avg velocity
+        if (normal.dot(avgVel) > 0.f){
+            float ab = (B-A).norm();
+            float bc = (C-B).norm();
+            float ca = (A-C).norm();
+            float s = (ab+bc+ca)/2.f;
+
+            float base = sqrt(s*(s-ab)*(s-bc)*(s-ca));
+            drag_surface += base;
+        }
+    }
 }
 
 void Simulation::draw(Shader *shader)
