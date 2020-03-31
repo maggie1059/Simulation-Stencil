@@ -114,7 +114,7 @@ void Simulation::init(const std::string &filePath)
 //see the effects of moving one vertex from rest position (used for video)
 //    m_nodes[0]->m_position += Vector3f(0,0.1f,0);
 
-//see the effects of shifting entire shape up (used for video)
+//see the effects of shifting entire shape up (used for video)-- comment out to see default!
     for (shared_ptr<Node> i : m_nodes){
         i->m_position += Vector3f(0,1.f,0);
     }
