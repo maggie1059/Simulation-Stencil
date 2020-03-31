@@ -5,9 +5,9 @@
 #define SPHERE_ON true
 #define DRAG_ON false
 #define RECALC_AREA false
-#define GRAVITY -2.f
+#define GRAVITY -0.2f //acceleration due to gravity
 #define C_d 0.47f
-#define AIR_DENSITY 2.5f
+#define AIR_DENSITY 1.5f
 
 using namespace Eigen;
 
@@ -330,15 +330,22 @@ void Simulation::updateForces(){
     //distribute/accumulate across 4 nodes
     for (shared_ptr<Element> e : m_elements){
         e->updateForces();
+    }
 
-        //add gravitational and drag force to all nodes (accumulated over shared nodes but divided by accumulated mass in update())
+    Vector3f avgVel;
+    if (DRAG_ON){
+        avgVel = getAvgVelocity();
+        if (RECALC_AREA){
+            getDragArea(avgVel);
+        }
+    }
+
+    //add gravitational and drag force to all nodes (accumulated over shared nodes but divided by accumulated mass in update())
+    for (shared_ptr<Node> n : m_nodes){
         if (GRAVITY_ON){
             Vector3f gravity(0, GRAVITY, 0);
+            gravity *= n->m_mass;
             if (DRAG_ON){
-                Vector3f avgVel = getAvgVelocity();
-                if (RECALC_AREA){
-                    getDragArea(avgVel);
-                }
                 Vector3f drag;
                 drag = C_d*AIR_DENSITY*0.5*drag_surface*avgVel.array().square();
                 avgVel.normalize();
@@ -346,10 +353,7 @@ void Simulation::updateForces(){
                 drag = -avgVel * drag.norm();
                 gravity += drag;
             }
-            e->m_n1->m_force += gravity;
-            e->m_n2->m_force += gravity;
-            e->m_n3->m_force += gravity;
-            e->m_n4->m_force += gravity;
+            n->m_force += gravity;
         }
     }
 }

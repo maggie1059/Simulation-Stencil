@@ -4,7 +4,7 @@ The program requires one command line argument to run: an input .mesh file. If n
 
 Features implemented:
 Surface mesh extraction (in simulation.cpp)
-Gravitational force (in simulation.cpp)
+Gravitational force (in simulation.cpp): Gravitational force on each node is calculated as that node's mass * acceleration due to gravity (defined in macro).
 Internal elastic forces (strain/stress) (in Element.cpp)
 Internal viscous damping forces (in Element.cpp)
 Collisions (with ground plane and sphere) (in simulation.cpp): implemented with sphere. The sphere is by default defined to have radius 1 and center at the origin. I rendered the sphere mesh at this position to visualize the obstacle.
@@ -40,7 +40,7 @@ Sphere_rk4:
 	Gravitational force
 	Collisions
 	RK4 integration
-Sphere_rk4_drag: (AIR_DENSITY = 2.5, C_d=0.47, RECALC_AREA=false)
+Sphere_rk4_drag: (AIR_DENSITY = 1.5, C_d=0.47, RECALC_AREA=true)
 	Gravitational force
 	Collisions
 	RK4 integration
